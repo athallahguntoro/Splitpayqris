@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PayKit — Your Payment Super App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<!-- Swapped jsQR for ZXing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/@zxing/browser@latest"></script>
+
+<style>
+/* ════════════════════════════════════════
+   SUPER APP SHELL
+════════════════════════════════════════ */
+:root {
+  --ink: #0F0E17;
+  --coral: #FF5733;
+  --coral-glow: rgba(255,87,51,0.13);
+  --amber: #FFB830;
+  --green: #00C896;
+  --purple: #7C3AED;
+  --blue: #3B82F6;
+  --surface: #F7F5F2;
+  --card: #FFFFFF;
+  --muted: #9A95A8;
+  --border: #EDE9E3;
+  --navy: #1A1830;
+  --shadow: 0 4px 24px rgba(15,14,23,0.08);
+  --shadow-lg: 0 16px 48px rgba(15,14,23,0.14);
+  --bot-nav: 64px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);max-width:430px;margin:0 auto;display:flex;flex-direction:column;position:relative;}
+
+/* ── SCREENS ─────────────────────────── */
+.screen{position:absolute;inset:0;bottom:var(--bot-nav);overflow-y:auto;-webkit-overflow-scrolling:touch;transition:transform 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.3s;transform:translateX(100%);opacity:0;pointer-events:none;}
+.screen.active{transform:translateX(0);opacity:1;pointer-events:auto;}
+.screen.slide-left{transform:translateX(-30%);opacity:0;}
+/* home never slides left */
+#screen-home.active{transform:translateX(0);}
+
+/* ── BOTTOM NAV ──────────────────────── */
+.bot-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:var(--bot-nav);background:rgba(255,255,255,0.97);backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;z-index:1000;}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:none;background:transparent;padding:6px 0;-webkit-tap-highlight-color:transparent;transition:transform 0.15s;}
+.nav-item:active{transform:scale(0.92);}
+.nav-icon{font-size:22px;line-height:1;}
+.nav-label{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:0.3px;transition:color 0.2s;}
+.nav-item.active .nav-label{color:var(--coral);}
+.nav-dot{width:4px;height:4px;border-radius:50%;background:var(--coral);margin-top:1px;opacity:0;transition:opacity 0.2s;}
+.nav-item.active .nav-dot{opacity:1;}
+
+/* ── HOME SCREEN ─────────────────────── */
+.home-header{background:linear-gradient(135deg,var(--navy) 0%,#2a2548 100%);padding:28px 22px 32px;position:relative;overflow:hidden;}
+.home-header::before{content:'';position:absolute;width:200px;height:200px;border-radius:50%;background:rgba(255,87,51,0.12);top:-60px;right:-40px;}
+.home-header::after{content:'';position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(124,58,237,0.1);bottom:-30px;left:40px;}
+.home-greeting{font-size:12px;color:rgba(255,255,255,0.45);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+.home-title{font-family:'Syne',sans-serif;font-weight:900;font-size:26px;color:white;letter-spacing:-0.5px;position:relative;}
+.home-title em{color:var(--coral);font-style:normal;}
+.home-subtitle{font-size:13px;color:rgba(255,255,255,0.4);margin-top:4px;position:relative;}
+.home-stats{display:flex;gap:12px;margin-top:20px;position:relative;}
+.stat-pill{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 14px;flex:1;backdrop-filter:blur(4px);}
+.stat-num{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:white;}
+.stat-lbl{font-size:10px;color:rgba(255,255,255,0.38);margin-top:1px;letter-spacing:0.5px;}
+
+/* ── APP GRID ────────────────────────── */
+.home-body{padding:20px 16px 16px;}
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:12px;}
+.app-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.app-card{background:var(--card);border-radius:22px;padding:18px 16px 16px;border:1.5px solid var(--border);box-shadow:var(--shadow);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform 0.18s,box-shadow 0.18s;position:relative;overflow:hidden;}
+.app-card::before{content:'';position:absolute;width:100px;height:100px;border-radius:50%;top:-30px;right:-20px;opacity:0.12;}
+.app-card.coral::before{background:var(--coral);}
+.app-card.purple::before{background:var(--purple);}
+.app-card.green::before{background:var(--green);}
+.app-card.blue::before{background:var(--blue);}
+.app-card:active{transform:scale(0.96);}
+.app-card:hover{box-shadow:var(--shadow-lg);}
+.app-card-icon{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:12px;}
+.app-card.coral .app-card-icon{background:linear-gradient(135deg,#FF8A70,#FF5733);}
+.app-card.purple .app-card-icon{background:linear-gradient(135deg,#A78BFA,#7C3AED);}
+.app-card.green .app-card-icon{background:linear-gradient(135deg,#34D399,#00C896);}
+.app-card.blue .app-card-icon{background:linear-gradient(135deg,#60A5FA,#3B82F6);}
+.app-card-name{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--ink);margin-bottom:3px;}
+.app-card-desc{font-size:11.5px;color:var(--muted);line-height:1.4;}
+.app-badge{position:absolute;top:12px;right:12px;background:var(--coral);color:white;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:0.5px;}
+
+/* Quick action strip */
+.quick-actions{display:flex;gap:10px;margin-bottom:20px;}
+.quick-btn{flex:1;background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:12px 10px;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all 0.18s;box-shadow:var(--shadow);}
+.quick-btn:active{transform:scale(0.95);}
+.quick-btn-icon{font-size:20px;margin-bottom:4px;}
+.quick-btn-lbl{font-size:11px;font-weight:600;color:var(--ink);}
+
+/* Recents */
+.recent-list{display:flex;flex-direction:column;gap:8px;}
+.recent-item{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:16px;padding:12px 14px;border:1.5px solid var(--border);}
+.recent-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.recent-info{flex:1;}
+.recent-name{font-size:13.5px;font-weight:600;color:var(--ink);}
+.recent-time{font-size:11px;color:var(--muted);margin-top:1px;}
+.recent-amt{font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:var(--coral);}
+
+/* ── APP TOPBAR ──────────────────────── */
+.app-topbar{background:var(--navy);padding:14px 18px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:200;}
+.back-btn{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;-webkit-tap-highlight-color:transparent;}
+.back-btn:active{background:rgba(255,255,255,0.2);}
+.app-topbar-title{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:white;flex:1;}
+.app-topbar-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;letter-spacing:0.5px;}
+
+/* ─────────────────────────────────────
+   SPLITPAY APP
+───────────────────────────────────── */
+.sp-step{display:none;padding:18px 16px 100px;}
+.sp-step.active{display:block;animation:fadeUp 0.3s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.step-eyebrow{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--coral);margin-bottom:6px;}
+.step-title{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;line-height:1.1;margin-bottom:6px;}
+.step-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px;}
+.chip-bar{display:flex;gap:5px;}
+.sp-chip{height:5px;border-radius:3px;background:rgba(255,255,255,0.15);transition:all 0.3s;width:24px;}
+.sp-chip.done{background:var(--green);}
+.sp-chip.active-chip{background:var(--coral);width:36px;}
+.card{background:var(--card);border-radius:20px;padding:18px;margin-bottom:12px;border:1.5px solid var(--border);box-shadow:var(--shadow);}
+.card-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;}
+input[type="text"],input[type="number"],textarea,select{width:100%;border:2px solid var(--border);border-radius:12px;padding:11px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--surface);outline:none;transition:border-color 0.2s,background 0.2s;-webkit-appearance:none;}
+input:focus,textarea:focus{border-color:var(--coral);background:#fff;}
+textarea{resize:none;font-size:11.5px;font-family:monospace;min-height:72px;line-height:1.4;}
+.pfx{position:relative;}
+.pfx-label{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:600;color:var(--muted);pointer-events:none;}
+.pfx input{padding-left:36px;}
+.btn{width:100%;padding:14px;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;border:none;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;-webkit-tap-highlight-color:transparent;}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:var(--coral);color:#fff;box-shadow:0 5px 18px rgba(255,87,51,0.35);}
+.btn-ghost{background:transparent;color:var(--ink);border:2px solid var(--border);}
+.btn-share{background:var(--navy);color:white;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 5px 18px rgba(26,24,48,0.3);}
+.btn-dl{background:var(--green);color:white;box-shadow:0 5px 18px rgba(0,200,150,0.3);}
+.btn-sm{width:auto;padding:6px 13px;font-size:12px;border-radius:10px;}
+.btn-icon-sm{width:30px;height:30px;padding:0;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.tab-row{display:flex;border:2px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:12px;background:var(--surface);}
+.tab-btn{flex:1;padding:9px 8px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:all 0.2s;}
+.tab-btn.active{background:var(--coral);color:white;border-radius:12px;}
+.upload-zone,.qris-upload-zone{border:2.5px dashed var(--border);border-radius:18px;padding:28px 18px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;background:var(--surface);}
+.upload-zone:hover,.qris-upload-zone:hover{border-color:var(--coral);background:var(--coral-glow);}
+.upload-zone input[type="file"],.qris-upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:none;padding:0;background:transparent;}
+.upload-icon{font-size:38px;margin-bottom:9px;}
+.upload-title{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;margin-bottom:3px;}
+.upload-sub{font-size:12px;color:var(--muted);}
+
+/* Receipt dual-action upload */
+.upload-zone-wrapper{margin-bottom:0;}
+.receipt-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.receipt-action-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:20px 12px;border-radius:16px;cursor:pointer;transition:all 0.18s;-webkit-tap-highlight-color:transparent;border:2px solid var(--border);background:var(--surface);}
+.receipt-action-btn:hover,.receipt-action-btn:active{transform:scale(0.97);}
+.camera-btn{border-color:rgba(255,87,51,0.3);background:rgba(255,87,51,0.05);}
+.camera-btn:hover{border-color:var(--coral);background:rgba(255,87,51,0.1);}
+.gallery-btn{border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.05);}
+.gallery-btn:hover{border-color:var(--blue);background:rgba(59,130,246,0.1);}
+.receipt-action-icon{font-size:34px;line-height:1;}
+.receipt-action-title{font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:var(--ink);}
+.receipt-action-sub{font-size:11px;color:var(--muted);}
+.receipt-preview-wrap{position:relative;border-radius:14px;overflow:hidden;margin-bottom:10px;}
+.receipt-preview-wrap img{width:100%;border-radius:14px;max-height:260px;object-fit:cover;display:block;}
+.receipt-change-btn{position:absolute;bottom:8px;right:8px;display:flex;gap:6px;}
+.receipt-change-btn label{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;border:none;}
+.receipt-change-btn .cam-lbl{background:rgba(255,87,51,0.9);color:white;}
+.receipt-change-btn .gal-lbl{background:rgba(15,14,23,0.75);color:white;}
+.preview-img{width:100%;border-radius:14px;max-height:240px;object-fit:cover;display:block;margin-bottom:9px;}
+.qris-preview-wrap{display:flex;align-items:center;gap:12px;padding:4px 0 8px;}
+.qris-preview-thumb{width:64px;height:64px;border-radius:11px;object-fit:cover;flex-shrink:0;border:2px solid var(--border);}
+.ocr-status,.qris-scan-status{display:flex;align-items:center;gap:9px;border-radius:12px;padding:11px 13px;font-size:12.5px;font-weight:500;margin-top:9px;}
+.ocr-status.scanning,.qris-scan-status.scanning{background:#fff8ec;border:1.5px solid var(--amber);color:#8a6000;}
+.ocr-status.success,.qris-scan-status.success{background:#edfaf5;border:1.5px solid var(--green);color:#0a6648;}
+.ocr-status.error,.qris-scan-status.error{background:#fff0ee;border:1.5px solid #ff8877;color:#b03020;}
+.ocr-spinner{width:15px;height:15px;border:2px solid var(--amber);border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.people-grid{display:flex;flex-direction:column;gap:7px;margin-bottom:9px;}
+.person-row{display:flex;align-items:center;gap:7px;}
+.person-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:white;}
+.person-del{width:28px;height:28px;border-radius:8px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:color 0.15s;}
+.person-del:hover{color:#e74c3c;}
+.items-list{display:flex;flex-direction:column;gap:9px;margin-bottom:10px;}
+.item-card{background:var(--surface);border:1.5px solid var(--border);border-radius:15px;padding:11px 13px;animation:slideIn 0.22s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateY(-5px);}to{opacity:1;transform:translateY(0);}}
+.item-card-top{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.item-name-input{flex:1;padding:8px 10px;font-size:13.5px;}
+.item-card-mid{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.qty-stepper{display:flex;align-items:center;border:2px solid var(--border);border-radius:9px;overflow:hidden;background:white;}
+.qty-btn{width:28px;height:28px;border:none;background:transparent;font-size:16px;font-weight:600;cursor:pointer;color:var(--ink);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.qty-btn:active{background:var(--coral-glow);}
+.qty-val{font-family:'Syne',sans-serif;font-weight:800;font-size:14px;min-width:26px;text-align:center;color:var(--ink);}
+.assign-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.assign-lbl{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);flex-shrink:0;}
+.assign-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px 3px 5px;border-radius:20px;border:2px solid var(--border);background:white;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;color:var(--muted);transition:all 0.15s;-webkit-tap-highlight-color:transparent;}
+.assign-chip .chip-dot{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;color:white;font-weight:700;flex-shrink:0;}
+.assign-chip.selected{border-color:var(--coral);background:var(--coral-glow);color:var(--coral);}
+.assign-chip.all-chip.selected{border-color:var(--navy);background:var(--navy);color:white;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;border-radius:12px;background:var(--border);cursor:pointer;transition:background 0.25s;}
+.toggle-slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;border-radius:50%;background:white;transition:transform 0.25s;box-shadow:0 1px 4px rgba(0,0,0,0.2);}
+.toggle input:checked+.toggle-slider{background:var(--coral);}
+.toggle input:checked+.toggle-slider::before{transform:translateX(20px);}
+.tax-extra-row{display:flex;align-items:center;gap:9px;background:var(--surface);border-radius:10px;padding:9px 12px;margin-top:9px;}
+.tax-extra-row .lbl{font-size:13px;font-weight:500;flex:1;}
+.tax-extra-row .pfx{width:130px;flex-shrink:0;}
+.tax-detect-info{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:7px;padding:8px 11px;background:var(--surface);border-radius:9px;border:1px solid var(--border);}
+.tax-detect-info.ai{color:#0a6648;background:#edfaf5;border-color:var(--green);}
+.tax-detect-info.warn{color:#8a6000;background:#fff8ec;border-color:var(--amber);}
+.summary-bar{background:var(--navy);border-radius:17px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;}
+.sb-lbl{font-size:10px;color:rgba(255,255,255,0.38);margin-bottom:2px;}
+.sb-val{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:white;}
+.sb-val.accent{color:#FF9B7A;font-size:20px;}
+.result-hero{background:var(--navy);border-radius:20px;padding:22px 18px 18px;margin-bottom:11px;display:flex;flex-direction:column;align-items:center;box-shadow:var(--shadow-lg);position:relative;overflow:hidden;}
+.result-hero::before{content:'';position:absolute;width:200px;height:200px;border-radius:50%;background:rgba(255,87,51,0.1);top:-70px;right:-50px;}
+.result-per{font-family:'Syne',sans-serif;font-weight:900;font-size:38px;color:white;text-align:center;letter-spacing:-1px;}
+.result-sub-lbl{font-size:11.5px;color:rgba(255,255,255,0.42);text-align:center;margin-bottom:16px;margin-top:2px;}
+#qr-wrap{background:white;border-radius:14px;padding:11px;display:flex;justify-content:center;margin-bottom:9px;}
+#qr-wrap canvas,#qr-wrap img{border-radius:7px;}
+.scan-hint{font-size:11.5px;color:rgba(255,255,255,0.3);text-align:center;}
+.person-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:12px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.person-tabs::-webkit-scrollbar{display:none;}
+.p-tab{flex-shrink:0;display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:11px;border:2px solid var(--border);background:white;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;color:var(--muted);transition:all 0.18s;-webkit-tap-highlight-color:transparent;}
+.p-tab .p-tab-dot{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:white;flex-shrink:0;}
+.p-tab.active{border-color:var(--coral);background:var(--coral-glow);color:var(--coral);}
+.breakdown{background:white;border-radius:17px;border:1.5px solid var(--border);overflow:hidden;margin-bottom:11px;}
+.breakdown-head{background:var(--ink);padding:9px 14px;display:flex;justify-content:space-between;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.32);}
+.bk-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12.5px;}
+.bk-row:last-child{border-bottom:none;}
+.bk-name{color:var(--ink);font-weight:500;flex:1;padding-right:7px;line-height:1.3;}
+.bk-amt{font-weight:600;color:var(--coral);white-space:nowrap;}
+.bk-row.sec{background:#fafafa;}
+.bk-row.sec .bk-name{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;}
+.bk-row.sec .bk-amt{color:var(--muted);}
+.bk-row.disc .bk-amt{color:var(--green);}
+.bk-row.tax-r .bk-amt{color:var(--amber);}
+.bk-row.shared-r .bk-name::after{content:' (shared)';font-size:10.5px;color:var(--muted);font-weight:400;}
+.bk-row.final{background:var(--surface);}
+.bk-row.final .bk-name{font-family:'Syne',sans-serif;font-weight:800;font-size:13px;}
+.bk-row.final .bk-amt{font-family:'Syne',sans-serif;font-size:15px;color:var(--ink);}
+.bk-section-head{padding:5px 14px;background:#f5f4f0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);}
+.qris-ok{display:flex;align-items:center;gap:7px;background:#edfaf5;border:1.5px solid var(--green);border-radius:10px;padding:9px 12px;font-size:12px;color:#0a6648;font-weight:500;margin-top:7px;}
+.g-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.tip{font-size:11.5px;color:var(--muted);line-height:1.6;padding:9px 11px;background:var(--surface);border-radius:9px;border:1px solid var(--border);margin-top:7px;}
+.divider{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:11.5px;margin:13px 0;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.row-sb{display:flex;justify-content:space-between;align-items:center;}
+.store-hdr{display:flex;align-items:center;gap:11px;background:white;border-radius:17px;padding:12px 14px;margin-bottom:11px;border:1.5px solid var(--border);}
+.store-icon{width:42px;height:42px;border-radius:12px;background:var(--coral-glow);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.store-name-txt{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;}
+.store-sub-txt{font-size:11.5px;color:var(--muted);}
+.sample-receipts{display:flex;flex-direction:column;gap:8px;}
+.sample-card{display:flex;align-items:center;gap:12px;background:var(--card);border:1.5px solid var(--border);border-radius:15px;padding:12px 14px;cursor:pointer;width:100%;text-align:left;transition:all 0.18s;box-shadow:var(--shadow);font-family:'DM Sans',sans-serif;}
+.sample-card:hover{border-color:var(--coral);background:#fff8f6;}
+.sample-card:active{transform:scale(0.98);}
+.sample-icon{font-size:24px;width:40px;height:40px;border-radius:11px;background:var(--surface);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sample-info{flex:1;}
+.sample-name{font-family:'Syne',sans-serif;font-weight:800;font-size:13px;color:var(--ink);margin-bottom:2px;}
+.sample-meta{font-size:11px;color:var(--muted);}
+.sample-arrow{font-size:15px;color:var(--coral);font-weight:700;flex-shrink:0;}
+/* sp footer */
+.sp-footer{position:sticky;bottom:0;left:0;right:0;background:rgba(247,245,242,0.96);backdrop-filter:blur(12px);border-top:1px solid var(--border);padding:11px 16px;display:flex;gap:9px;z-index:50;}
+/* MDR */
+.mdr-toggle-card{background:linear-gradient(135deg,#1A1830,#2a2548);border-radius:17px;padding:15px 16px;margin-top:13px;border:1.5px solid rgba(255,87,51,0.25);}
+.mdr-toggle-row{display:flex;align-items:flex-start;gap:13px;justify-content:space-between;}
+.mdr-badge{display:inline-block;background:#FF5733;color:white;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:0.5px;margin-bottom:4px;}
+.mdr-title{font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:white;margin-bottom:3px;}
+.mdr-sub{font-size:11px;color:rgba(255,255,255,0.45);line-height:1.5;}
+.qris-entry{background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:13px;padding:12px 13px;margin-bottom:8px;position:relative;transition:border-color 0.2s;}
+.qris-entry.active-slot{border-color:rgba(0,200,150,0.5);background:rgba(0,200,150,0.06);}
+.qris-entry.full-slot{border-color:rgba(255,184,48,0.4);background:rgba(255,184,48,0.05);}
+.qris-entry-header{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.qris-slot-num{width:24px;height:24px;border-radius:50%;background:rgba(255,87,51,0.25);color:#FF9B7A;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.qris-slot-del{background:transparent;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:15px;padding:0;width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
+.qris-slot-del:hover{color:#ff8877;}
+.qris-entry input[type="text"]{background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.12);color:white;font-size:12px;padding:8px 10px;}
+.qris-entry input[type="text"]::placeholder{color:rgba(255,255,255,0.3);}
+.qris-entry textarea{background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.12);color:white;font-size:10.5px;min-height:52px;margin-top:6px;}
+.qris-entry textarea::placeholder{color:rgba(255,255,255,0.3);}
+.slot-status{display:flex;align-items:center;gap:5px;margin-top:7px;font-size:11px;}
+.slot-bar-wrap{flex:1;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;}
+.slot-bar-fill{height:100%;border-radius:2px;transition:width 0.4s;}
+.slot-bar-fill.ok{background:var(--green);}
+.slot-bar-fill.warn{background:var(--amber);}
+.slot-bar-fill.full{background:#ff5733;}
+.add-qris-btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:10px;border:2px dashed rgba(255,255,255,0.18);border-radius:12px;background:transparent;color:rgba(255,255,255,0.5);font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;transition:all 0.2s;margin-top:4px;}
+.add-qris-btn:hover{border-color:rgba(255,87,51,0.5);color:#FF9B7A;}
+.mdr-info-pill{background:rgba(255,184,48,0.15);border:1px solid rgba(255,184,48,0.3);border-radius:9px;padding:8px 11px;font-size:11px;color:rgba(255,255,255,0.6);line-height:1.5;margin-top:9px;}
+.mdr-info-pill strong{color:var(--amber);}
+.qris-slot-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:5px;}
+.qris-routing-info{background:rgba(0,0,0,0.22);border-radius:11px;padding:9px 13px;margin-top:7px;font-size:11.5px;color:rgba(255,255,255,0.5);text-align:center;}
+@keyframes pop{0%{transform:scale(0.75);opacity:0;}65%{transform:scale(1.04);}100%{transform:scale(1);opacity:1;}}
+.pop{animation:pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;}
+
+/* ─────────────────────────────────────
+   QRIS EXTRACTOR APP
+───────────────────────────────────── */
+.qx-body{padding:18px 16px 100px;}
+.qx-hero{background:linear-gradient(135deg,var(--purple),#5B21B6);border-radius:20px;padding:22px 20px;margin-bottom:16px;color:white;position:relative;overflow:hidden;}
+.qx-hero::before{content:'';position:absolute;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,0.07);top:-40px;right:-30px;}
+.qx-hero-title{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;margin-bottom:4px;position:relative;}
+.qx-hero-sub{font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;position:relative;}
+.qx-drop{border:2.5px dashed rgba(124,58,237,0.3);border-radius:18px;padding:30px 20px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;background:rgba(124,58,237,0.04);}
+.qx-drop:hover{border-color:var(--purple);background:rgba(124,58,237,0.08);}
+.qx-drop input[type="file"]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:none;padding:0;background:transparent;}
+.qx-status{display:flex;align-items:center;gap:9px;border-radius:12px;padding:11px 13px;font-size:12.5px;font-weight:500;margin-top:10px;}
+.qx-status.scanning{background:#f3f0ff;border:1.5px solid #a78bfa;color:#5B21B6;}
+.qx-status.success{background:#edfaf5;border:1.5px solid var(--green);color:#0a6648;}
+.qx-status.error{background:#fff0ee;border:1.5px solid #ff8877;color:#b03020;}
+.qx-spinner{width:15px;height:15px;border:2px solid #a78bfa;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;}
+.qx-result{background:white;border-radius:20px;border:1.5px solid var(--border);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px;}
+.qx-result-header{background:linear-gradient(135deg,var(--purple),#5B21B6);padding:14px 16px;display:flex;align-items:center;gap:10px;}
+.qx-result-title{font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:white;flex:1;}
+.qx-field{padding:12px 16px;border-bottom:1px solid var(--border);}
+.qx-field:last-child{border-bottom:none;}
+.qx-field-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;}
+.qx-field-value{font-size:14px;font-weight:600;color:var(--ink);word-break:break-all;}
+.qx-field-value.mono{font-family:monospace;font-size:12px;background:var(--surface);padding:8px 10px;border-radius:9px;border:1px solid var(--border);line-height:1.5;}
+.qx-field-value.green{color:var(--green);}
+.qx-field-value.amber{color:var(--amber);}
+.qx-field-value.red{color:#e74c3c;}
+.qx-copy-btn{display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:9px;border:1.5px solid var(--border);background:white;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink);margin-top:8px;transition:all 0.15s;}
+.qx-copy-btn:hover{border-color:var(--purple);color:var(--purple);}
+.qx-copy-btn.copied{border-color:var(--green);color:var(--green);}
+.qx-tlv-table{width:100%;border-collapse:collapse;}
+.qx-tlv-table tr:nth-child(even) td{background:#fafafa;}
+.qx-tlv-table td{padding:7px 14px;font-size:12px;border-bottom:1px solid var(--border);}
+.qx-tlv-table td:first-child{font-weight:700;color:var(--muted);width:50px;font-family:monospace;}
+.qx-tlv-table td:nth-child(2){color:var(--ink);font-family:monospace;word-break:break-all;}
+.qx-history-item{display:flex;align-items:center;gap:11px;background:var(--card);border-radius:14px;padding:11px 13px;border:1.5px solid var(--border);margin-bottom:8px;cursor:pointer;transition:all 0.18s;}
+.qx-history-item:hover{border-color:var(--purple);background:#f5f3ff;}
+.qx-history-icon{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#a78bfa,var(--purple));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.qx-history-info{flex:1;min-width:0;}
+.qx-history-name{font-weight:600;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.qx-history-nmid{font-size:11px;color:var(--muted);margin-top:1px;}
+.qx-history-del{background:transparent;border:none;color:#ddd;cursor:pointer;font-size:16px;padding:0;flex-shrink:0;}
+.qx-history-del:hover{color:#e74c3c;}
+.qx-use-btn{background:var(--purple);color:white;font-size:11.5px;font-weight:700;padding:5px 12px;border:none;border-radius:8px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;}
+
+/* SHARE MODAL (global) */
+.share-modal-overlay{position:fixed;inset:0;background:rgba(15,14,23,0.75);backdrop-filter:blur(6px);z-index:900;overflow-y:auto;padding:20px 16px 40px;display:none;}
+.share-modal-overlay.open{display:block;}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     HOME SCREEN
+══════════════════════════════════════ -->
+<div class="screen active" id="screen-home">
+  <div class="home-header">
+    <div class="home-greeting">Good day 👋</div>
+    <div class="home-title">Pay<em>Kit</em></div>
+    <div class="home-subtitle">Your all-in-one QRIS & payment toolkit</div>
+    <div class="home-stats">
+      <div class="stat-pill">
+        <div class="stat-num" id="home-stat-apps">2</div>
+        <div class="stat-lbl">MINI APPS</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-num" id="home-stat-qris">0</div>
+        <div class="stat-lbl">QRIS SAVED</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-num">Free</div>
+        <div class="stat-lbl">MDR LIMIT</div>
+      </div>
+    </div>
+  </div>
+  <div class="home-body">
+    <div class="section-title">Apps</div>
+    <div class="app-grid">
+      <div class="app-card coral" onclick="openApp('splitpay')">
+        <div class="app-card-icon">🧾</div>
+        <div class="app-card-name">SplitPay</div>
+        <div class="app-card-desc">Split bills, assign items & generate QRIS per person</div>
+        <div class="app-badge">NEW</div>
+      </div>
+      <div class="app-card purple" onclick="openApp('qxextract')">
+        <div class="app-card-icon">🔍</div>
+        <div class="app-card-name">QRIS Extract</div>
+        <div class="app-card-desc">Decode any QRIS image & extract merchant info</div>
+      </div>
+    </div>
+
+    <div class="section-title">Quick Actions</div>
+    <div class="quick-actions">
+      <div class="quick-btn" onclick="openApp('splitpay')">
+        <div class="quick-btn-icon">➗</div>
+        <div class="quick-btn-lbl">Split Bill</div>
+      </div>
+      <div class="quick-btn" onclick="openApp('qxextract')">
+        <div class="quick-btn-icon">📷</div>
+        <div class="quick-btn-lbl">Scan QRIS</div>
+      </div>
+      <div class="quick-btn" onclick="openApp('qxextract');setTimeout(()=>document.getElementById('qx-file').click(),400)">
+        <div class="quick-btn-icon">🔳</div>
+        <div class="quick-btn-lbl">Extract</div>
+      </div>
+    </div>
+
+    <div class="section-title">QRIS Library <span id="qx-lib-count" style="font-weight:400;color:var(--muted);">(tap QRIS Extract to add)</span></div>
+    <div id="home-qris-library">
+      <div style="text-align:center;padding:24px 0;color:var(--muted);font-size:13px;">
+        📂 No saved QRIS yet<br><span style="font-size:11px;">Extract a QRIS to save it here</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SPLITPAY APP SCREEN
+══════════════════════════════════════ -->
+<div class="screen" id="screen-splitpay">
+  <div class="app-topbar">
+    <button class="back-btn" onclick="closeApp()">←</button>
+    <div class="app-topbar-title">🧾 SplitPay</div>
+    <div class="app-topbar-badge" id="sp-step-badge" style="background:rgba(255,87,51,0.2);color:#FF9B7A;">Step 1 of 4</div>
+  </div>
+  <div style="padding:10px 16px 6px;">
+    <div class="chip-bar">
+      <div class="sp-chip active-chip" id="ch1"></div>
+      <div class="sp-chip" id="ch2"></div>
+      <div class="sp-chip" id="ch3"></div>
+      <div class="sp-chip" id="ch4"></div>
+    </div>
+  </div>
+
+  <!-- STEP 1 — QRIS -->
+  <div class="sp-step active" id="step-1">
+    <div class="step-eyebrow">Step 1 of 4</div>
+    <div class="step-title">Setup<br>Your QRIS</div>
+    <div class="step-sub">Upload your static QRIS or paste the string. We'll embed each person's amount.</div>
+    <div class="tab-row">
+      <button class="tab-btn active" id="tab-upload" onclick="switchQrisTab('upload')">📷 Scan Image</button>
+      <button class="tab-btn" id="tab-paste" onclick="switchQrisTab('paste')">⌨️ Paste String</button>
+      <button class="tab-btn" id="tab-library" onclick="switchQrisTab('library')">📂 Library</button>
+    </div>
+    <div id="qris-tab-upload">
+      <div class="card">
+        <div class="card-label">QRIS Image</div>
+        <div class="qris-upload-zone" id="qris-upload-zone">
+          <input type="file" id="qris-file" accept="image/*" onchange="handleQrisImage(this)">
+          <div class="upload-icon">🔳</div>
+          <div class="upload-title">Upload your QRIS</div>
+          <div class="upload-sub">Screenshot or photo of static QRIS code</div>
+        </div>
+        <div id="qris-scan-status-box"></div>
+      </div>
+      <div class="tip">📲 GoPay/OVO/BCA → My QR → screenshot it.</div>
+    </div>
+    <div id="qris-tab-paste" style="display:none;">
+      <div class="card">
+        <div class="card-label">Static QRIS String</div>
+        <textarea id="qris-input" placeholder="000201010211...6304XXXX" spellcheck="false" oninput="validateQRIS()"></textarea>
+        <div id="qris-feedback"></div>
+      </div>
+      <div class="tip">✅ Pre-filled with your default QRIS. Edit to use another.</div>
+    </div>
+    <div id="qris-tab-library" style="display:none;">
+      <div class="card">
+        <div class="card-label">Saved QRIS Codes</div>
+        <div id="sp-qris-library-list"><div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">No saved QRIS. Use QRIS Extractor to add.</div></div>
+      </div>
+    </div>
+    <div class="divider">or try demo</div>
+    <button class="btn btn-ghost" onclick="loadDemo()">⚡ Load Demo QRIS</button>
+    <div style="margin-top:13px;">
+      <div class="card">
+        <div class="card-label row-sb">Bank Transfer Info <span style="font-weight:400;color:var(--muted);font-size:10px;text-transform:none;letter-spacing:0;">(optional)</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:3px;font-weight:600;">Bank Name</div><input type="text" id="bank-name" placeholder="e.g. BCA, Mandiri" oninput="bankName=this.value"></div>
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:3px;font-weight:600;">Account Number</div><input type="text" id="bank-acc" placeholder="e.g. 1234567890" oninput="bankAccNum=this.value" inputmode="numeric"></div>
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:3px;font-weight:600;">Beneficiary Name</div><input type="text" id="bank-beneficiary" placeholder="e.g. ATHALLAH GUNTORO" oninput="bankBeneficiary=this.value"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mdr-toggle-card">
+      <div class="mdr-toggle-row">
+        <div style="flex:1;"><div class="mdr-badge">MDR PROTECTION</div><div class="mdr-title">Multiple QRIS Rotation</div><div class="mdr-sub">Free up to <strong style="color:var(--amber);">Rp 500.000/day</strong> per code.</div></div>
+        <label class="toggle" style="margin-top:4px;flex-shrink:0;"><input type="checkbox" id="multi-qris-toggle" onchange="toggleMultiQRIS(this.checked)"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="mdr-info-pill">ℹ️ UMI static QRIS: free up to <strong>Rp 500.000</strong>/day. Above that, 0.3% MDR.</div>
+      <div id="multi-qris-panel" style="display:none;margin-top:13px;">
+        <div id="qris-list-container"></div>
+        <button class="add-qris-btn" onclick="addQRISSlot()">+ Add Another QRIS Code</button>
+        <div id="qris-routing-preview" style="margin-top:11px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 — RECEIPT -->
+  <div class="sp-step" id="step-2">
+    <div class="step-eyebrow">Step 2 of 4</div>
+    <div class="step-title">Scan the<br>Receipt</div>
+    <div class="step-sub">AI reads items, discounts, and detects tax automatically.</div>
+    <div class="card">
+      <div class="card-label">Receipt Photo</div>
+      <div id="upload-zone" class="upload-zone-wrapper">
+        <!-- Default state: two action buttons -->
+        <div id="receipt-btn-row" class="receipt-btn-row">
+          <label class="receipt-action-btn camera-btn">
+            <input type="file" id="receipt-camera" accept="image/*" capture="environment" onchange="handleFile(this)" style="display:none;">
+            <div class="receipt-action-icon">📷</div>
+            <div class="receipt-action-title">Take Photo</div>
+            <div class="receipt-action-sub">Use camera</div>
+          </label>
+          <label class="receipt-action-btn gallery-btn">
+            <input type="file" id="receipt-gallery" accept="image/*" onchange="handleFile(this)" style="display:none;">
+            <div class="receipt-action-icon">🖼️</div>
+            <div class="receipt-action-title">Upload</div>
+            <div class="receipt-action-sub">From gallery</div>
+          </label>
+        </div>
+      </div>
+      <div id="ocr-status-box"></div>
+    </div>
+    <div class="divider">or try a sample receipt</div>
+    <div class="sample-receipts">
+      <button class="sample-card" onclick="loadSampleReceipt('kopi_calf')"><div class="sample-icon">☕</div><div class="sample-info"><div class="sample-name">Kopi Calf</div><div class="sample-meta">5 drinks · Rp75.700 · discount applied</div></div><div class="sample-arrow">→</div></button>
+      <button class="sample-card" onclick="loadSampleReceipt('papaya')"><div class="sample-icon">🛒</div><div class="sample-info"><div class="sample-name">Papaya Fresh Gallery</div><div class="sample-meta">17 items · Rp541.200 · tax excluded</div></div><div class="sample-arrow">→</div></button>
+      <button class="sample-card" onclick="loadSampleReceipt('aeon')"><div class="sample-icon">🏪</div><div class="sample-info"><div class="sample-name">AEON Tanjung Barat</div><div class="sample-meta">27 items · Rp912.418 · PATAK tax</div></div><div class="sample-arrow">→</div></button>
+    </div>
+    <div class="divider">or</div>
+    <button class="btn btn-ghost" onclick="skipToManual()">Enter items manually →</button>
+  </div>
+
+  <!-- STEP 3 — REVIEW -->
+  <div class="sp-step" id="step-3">
+    <div class="step-eyebrow">Step 3 of 4</div>
+    <div class="step-title">Assign &<br>Review</div>
+    <div class="step-sub">Set quantities, assign items, adjust tax & discounts.</div>
+    <div id="store-header-box"></div>
+    <div class="card"><div class="card-label row-sb"><span>People Splitting</span><button class="btn btn-ghost btn-sm" onclick="addPerson()" style="border:none;color:var(--coral);font-weight:700;padding:0;">+ Add</button></div><div class="people-grid" id="people-grid"></div></div>
+    <div class="card"><div class="card-label row-sb"><span>Items</span><button class="btn btn-ghost btn-sm" onclick="addItem()" style="border:none;color:var(--coral);font-weight:700;padding:0;">+ Add</button></div><div class="items-list" id="items-list"></div></div>
+    <div class="card"><div class="card-label">Discount / Voucher</div><div class="pfx"><span class="pfx-label">Rp</span><input type="number" id="discount-input" placeholder="0" min="0" oninput="updateSummary()" inputmode="numeric"></div></div>
+    <div class="card">
+      <div class="card-label">Tax / Service Charge</div>
+      <div class="toggle-row"><div><div style="font-size:13.5px;font-weight:500;">Tax included in prices?</div></div><label class="toggle"><input type="checkbox" id="tax-included" onchange="onTaxToggle()"><span class="toggle-slider"></span></label></div>
+      <div id="tax-ai-note"></div>
+      <div id="tax-extra" style="display:none;margin-top:9px;"><div class="tax-extra-row"><span class="lbl">Tax / Service Amount</span><div class="pfx"><span class="pfx-label">Rp</span><input type="number" id="tax-amount" placeholder="0" min="0" oninput="updateSummary()" inputmode="numeric" style="padding-left:32px;text-align:right;"></div></div></div>
+    </div>
+    <div class="summary-bar"><div><div class="sb-lbl">Total Bill</div><div class="sb-val" id="sum-total">Rp 0</div></div><div style="text-align:center;"><div class="sb-lbl">People</div><div class="sb-val" id="sum-ppl" style="color:rgba(255,255,255,0.55)">2</div></div><div style="text-align:right;"><div class="sb-lbl">Avg/person</div><div class="sb-val accent" id="sum-per">Rp 0</div></div></div>
+  </div>
+
+  <!-- STEP 4 — RESULT -->
+  <div class="sp-step" id="step-4">
+    <div class="step-eyebrow">Ready to pay! 🎉</div>
+    <div class="step-title">Pay<br>Up!</div>
+    <div class="step-sub">Each person scans their QR code to pay their exact share.</div>
+    <div class="person-tabs" id="result-person-tabs"></div>
+    <div class="result-hero pop" id="result-hero">
+      <div style="font-size:10.5px;color:rgba(255,255,255,0.32);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;" id="result-person-label">Person</div>
+      <div id="qris-slot-badge"></div>
+      <div class="result-per" id="result-per">Rp 0</div>
+      <div class="result-sub-lbl" id="result-sub"></div>
+      <div id="qr-wrap"><div id="qr-container"></div></div>
+      <div class="scan-hint">📱 Open GoPay / OVO / BCA → Scan QR</div>
+      <div class="qris-routing-info" id="qris-routing-info" style="display:none;"></div>
+    </div>
+    <div class="breakdown" id="breakdown-box"><div class="breakdown-head"><span id="bd-person-name">Person's items</span><span id="bd-total-lbl"></span></div><div id="breakdown-rows"></div></div>
+    <button class="btn btn-ghost" onclick="goStep(3)" style="margin-bottom:8px;">← Edit Bill</button>
+    <button class="btn btn-share" onclick="shareReceipt()" id="btn-share"><span>📤</span> Share Receipt + QR</button>
+    <button class="btn btn-primary" onclick="if(confirm('Start a new split?')){currentStep=1;goStep(1);}" style="margin-top:8px;">+ New Split</button>
+  </div>
+
+  <!-- SplitPay footer nav -->
+  <div class="sp-footer">
+    <button class="btn btn-ghost" id="btn-back" style="display:none;flex:1;min-width:80px;" onclick="goBack()">← Back</button>
+    <button class="btn btn-primary" id="btn-next" style="flex:2;" onclick="goNext()">Continue →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     QRIS EXTRACTOR APP SCREEN
+══════════════════════════════════════ -->
+<div class="screen" id="screen-qxextract">
+  <div class="app-topbar">
+    <button class="back-btn" onclick="closeApp()">←</button>
+    <div class="app-topbar-title">🔍 QRIS Extract</div>
+    <div class="app-topbar-badge" style="background:rgba(124,58,237,0.2);color:#a78bfa;">Decoder</div>
+  </div>
+  <div class="qx-body">
+    <div class="qx-hero">
+      <div class="qx-hero-title">QRIS String Extractor</div>
+      <div class="qx-hero-sub">Upload any QRIS image — static, dynamic, or merchant printout. We'll decode the QR code and extract all merchant details, NMID, and the raw QRIS string.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Upload QRIS Image</div>
+      <div id="qx-upload-zone" class="upload-zone-wrapper">
+        <div class="receipt-btn-row">
+          <label class="receipt-action-btn camera-btn">
+            <input type="file" id="qx-file" accept="image/*" capture="environment" onchange="qxHandleFile(this)" style="display:none;">
+            <div class="receipt-action-icon">📷</div>
+            <div class="receipt-action-title">Take Photo</div>
+            <div class="receipt-action-sub">Use camera</div>
+          </label>
+          <label class="receipt-action-btn gallery-btn">
+            <input type="file" accept="image/*" onchange="qxHandleFile(this)" style="display:none;">
+            <div class="receipt-action-icon">🖼️</div>
+            <div class="receipt-action-title">Upload</div>
+            <div class="receipt-action-sub">From gallery</div>
+          </label>
+        </div>
+      </div>
+      <div id="qx-status-box"></div>
+    </div>
+
+    <!-- Result panel -->
+    <div id="qx-result-panel" style="display:none;"></div>
+
+    <!-- History -->
+    <div id="qx-history-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="section-title" style="margin-bottom:0;">Saved QRIS Library</div>
+        <button onclick="clearQxHistory()" style="font-size:11px;color:var(--muted);background:transparent;border:none;cursor:pointer;padding:4px 8px;">Clear all</button>
+      </div>
+      <div id="qx-history-list"><div style="text-align:center;padding:24px 0;color:var(--muted);font-size:13px;">📂 No QRIS saved yet</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="share-modal-overlay" id="share-modal">
+  <div style="max-width:400px;margin:0 auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:white;">Share Receipt</div>
+      <button onclick="document.getElementById('share-modal').classList.remove('open')" style="background:rgba(255,255,255,0.12);border:none;color:white;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+    </div>
+    <canvas id="share-canvas" style="width:100%;border-radius:18px;display:block;box-shadow:0 16px 48px rgba(0,0,0,0.4);"></canvas>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;" id="share-actions"></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bot-nav">
+  <button class="nav-item active" id="nav-home" onclick="navTo('home')">
+    <div class="nav-icon">🏠</div>
+    <div class="nav-label">Home</div>
+    <div class="nav-dot"></div>
+  </button>
+  <button class="nav-item" id="nav-splitpay" onclick="navTo('splitpay')">
+    <div class="nav-icon">🧾</div>
+    <div class="nav-label">SplitPay</div>
+    <div class="nav-dot"></div>
+  </button>
+  <button class="nav-item" id="nav-qxextract" onclick="navTo('qxextract')">
+    <div class="nav-icon">🔍</div>
+    <div class="nav-label">QRIS Extract</div>
+    <div class="nav-dot"></div>
+  </button>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// SUPER APP NAVIGATION
+// ══════════════════════════════════════════════════════════════
+let currentApp = 'home';
+
+function navTo(app) {
+  // Deactivate all screens
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active','slide-left');
+    if(s.id !== 'screen-' + app) s.classList.add('slide-left');
+  });
+  document.getElementById('screen-' + app).classList.remove('slide-left');
+  document.getElementById('screen-' + app).classList.add('active');
+  // Nav items
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('nav-' + app)?.classList.add('active');
+  currentApp = app;
+  if(app === 'home') refreshHome();
+}
+
+function openApp(app) { navTo(app); }
+function closeApp() { navTo('home'); }
+
+function refreshHome() {
+  const lib = getQxLibrary();
+  document.getElementById('home-stat-qris').textContent = lib.length;
+  document.getElementById('qx-lib-count').textContent = `(${lib.length} saved)`;
+  renderHomeLibrary(lib);
+}
+
+function renderHomeLibrary(lib) {
+  const el = document.getElementById('home-qris-library');
+  if(!lib.length) { el.innerHTML = '<div style="text-align:center;padding:24px 0;color:var(--muted);font-size:13px;">📂 No saved QRIS yet<br><span style="font-size:11px;">Use QRIS Extractor to add</span></div>'; return; }
+  el.innerHTML = lib.slice(0,3).map((q,i) => `
+    <div class="recent-item" onclick="navTo('splitpay');switchQrisTab('library');">
+      <div class="recent-icon" style="background:linear-gradient(135deg,#a78bfa,var(--purple));">🔳</div>
+      <div class="recent-info">
+        <div class="recent-name">${escHtml(q.name||'Unknown')}</div>
+        <div class="recent-time">${escHtml(q.nmid||'')} · Saved ${q.savedAt||''}</div>
+      </div>
+    </div>`).join('') + (lib.length>3?`<div style="text-align:center;font-size:12px;color:var(--muted);padding:8px;">+${lib.length-3} more in library</div>`:'');
+}
+
+// ══════════════════════════════════════════════════════════════
+// SHARED QRIS LIBRARY (localStorage)
+// ══════════════════════════════════════════════════════════════
+function getQxLibrary() { try { return JSON.parse(localStorage.getItem('paykit_qris_lib')||'[]'); } catch { return []; } }
+function saveQxLibrary(lib) { try { localStorage.setItem('paykit_qris_lib',JSON.stringify(lib)); } catch {} }
+
+function addToQxLibrary(entry) {
+  const lib = getQxLibrary();
+  const exists = lib.findIndex(q => q.string === entry.string);
+  if(exists >= 0) lib.splice(exists,1);
+  lib.unshift({ ...entry, savedAt: new Date().toLocaleDateString('id-ID') });
+  if(lib.length > 20) lib.splice(20);
+  saveQxLibrary(lib);
+  renderQxHistoryList();
+  renderSpLibraryList();
+}
+
+function clearQxHistory() {
+  if(!confirm('Clear all saved QRIS?')) return;
+  saveQxLibrary([]);
+  renderQxHistoryList();
+  renderSpLibraryList();
+  refreshHome();
+}
+
+function renderQxHistoryList() {
+  const lib = getQxLibrary();
+  const el = document.getElementById('qx-history-list');
+  if(!lib.length) { el.innerHTML = '<div style="text-align:center;padding:24px 0;color:var(--muted);font-size:13px;">📂 No QRIS saved yet</div>'; return; }
+  el.innerHTML = lib.map((q,i) => `
+    <div class="qx-history-item">
+      <div class="qx-history-icon">🔳</div>
+      <div class="qx-history-info">
+        <div class="qx-history-name">${escHtml(q.name||'Unknown Merchant')}</div>
+        <div class="qx-history-nmid">NMID: ${escHtml(q.nmid||'—')} · ${q.savedAt||''}</div>
+      </div>
+      <button class="qx-use-btn" onclick="useQxInSplitpay(${i})">Use →</button>
+      <button class="qx-history-del" onclick="deleteQxEntry(${i})">×</button>
+    </div>`).join('');
+}
+
+function renderSpLibraryList() {
+  const lib = getQxLibrary();
+  const el = document.getElementById('sp-qris-library-list');
+  if(!lib.length) { el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No saved QRIS. Use QRIS Extractor to add.</div>'; return; }
+  el.innerHTML = lib.map((q,i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#a78bfa,var(--purple));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🔳</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:13px;">${escHtml(q.name||'Unknown')}</div>
+        <div style="font-size:10.5px;color:var(--muted);">${escHtml(q.nmid||'')}</div>
+      </div>
+      <button onclick="loadQxIntoQris(${i})" style="background:var(--purple);color:white;font-size:11.5px;font-weight:700;padding:5px 12px;border:none;border-radius:8px;cursor:pointer;flex-shrink:0;">Use</button>
+    </div>`).join('');
+}
+
+function useQxInSplitpay(i) {
+  const lib = getQxLibrary();
+  if(!lib[i]) return;
+  loadQxIntoQrisFromEntry(lib[i]);
+  navTo('splitpay');
+}
+
+function loadQxIntoQris(i) {
+  const lib = getQxLibrary();
+  if(!lib[i]) return;
+  loadQxIntoQrisFromEntry(lib[i]);
+  switchQrisTab('paste');
+}
+
+function loadQxIntoQrisFromEntry(entry) {
+  document.getElementById('qris-input').value = entry.string || '';
+  validateQRIS();
+}
+
+function deleteQxEntry(i) {
+  const lib = getQxLibrary(); lib.splice(i,1); saveQxLibrary(lib);
+  renderQxHistoryList(); renderSpLibraryList(); refreshHome();
+}
+
+// ══════════════════════════════════════════════════════════════
+// QRIS EXTRACTOR APP
+// ══════════════════════════════════════════════════════════════
+async function qxHandleFile(input) {
+  const file = input.files[0]; if(!file) return;
+  const mime = file.type||'image/png';
+  const reader = new FileReader();
+  reader.onload = async(e) => {
+    const imgSrc = e.target.result, b64 = imgSrc.split(',')[1];
+    // Show preview with retake/change buttons
+    const zone = document.getElementById('qx-upload-zone');
+    zone.innerHTML = `
+      <div class="receipt-preview-wrap">
+        <img src="${imgSrc}" alt="QRIS" style="max-height:220px;object-fit:contain;">
+        <div class="receipt-change-btn">
+          <label class="cam-lbl">
+            <input type="file" accept="image/*" capture="environment" onchange="qxHandleFile(this)" style="display:none;">
+            📷 Retake
+          </label>
+          <label class="gal-lbl">
+            <input type="file" accept="image/*" onchange="qxHandleFile(this)" style="display:none;">
+            🖼️ Change
+          </label>
+        </div>
+      </div>`;
+
+    showQxStatus('scanning','Step 1/2 — Scanning pixels locally…', 20);
+    document.getElementById('qx-result-panel').style.display='none';
+    
+    try {
+      // Step 1: Replace jsQR with robust ZXing implementation
+      const raw = await decodeQRWithZXing(imgSrc);
+      
+      if(raw && isValidQRIS(raw)) {
+        showQxStatus('success','✓ QR decoded instantly!', 100);
+        renderQxResult(raw, imgSrc);
+        return;
+      }
+      if(raw) {
+        showQxStatus('success','✓ QR decoded (not a QRIS)', 100);
+        renderRawQR(raw);
+        return;
+      }
+      
+      // AI fallback with live countdown
+      showQxStatus('scanning','Step 2/2 — Sending to AI (up to 15s)…', 30);
+      let elapsed=0;
+      const countdownTimer=setInterval(()=>{
+        elapsed++;
+        const pct=Math.min(88,30+(elapsed/15)*58);
+        const remaining=Math.max(0,15-elapsed);
+        showQxStatus('scanning',`Step 2/2 — AI decoding… ${remaining}s remaining`, Math.round(pct));
+        if(elapsed>=15) clearInterval(countdownTimer);
+      },1000);
+
+      const ai = await Promise.race([
+        extractQrisFromImageAI(b64, mime),
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),15000))
+      ]);
+      clearInterval(countdownTimer);
+
+      if(ai && isValidQRIS(ai)) {
+        showQxStatus('success','✓ QRIS extracted via AI!', 100);
+        renderQxResult(ai, imgSrc);
+      } else {
+        showQxStatus('error','⚠ Could not decode. Try: crop closer to the QR code or use a higher-res image.');
+      }
+    } catch(err) {
+      if(err.message==='timeout'){
+        showQxStatus('error','⏱ Timed out after 15s. Try a cleaner, cropped image of just the QR code.');
+      } else {
+        console.error("QRIS API Error:", err);
+        showQxStatus('error','⚠ Failed: '+err.message);
+      }
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function showQxStatus(type, msg, progress=null) {
+  const sp = type==='scanning'?'<div class="qx-spinner"></div>':
+             type==='success' ?'<span style="font-size:15px;">✅</span>':
+             type==='error'   ?'<span style="font-size:15px;">⚠️</span>':'';
+  const bar = progress!==null ? `<div style="width:100%;height:4px;background:rgba(124,58,237,0.12);border-radius:2px;margin-top:7px;overflow:hidden;"><div style="height:100%;width:${progress}%;background:${type==='success'?'#00C896':type==='error'?'#ff8877':'#a78bfa'};border-radius:2px;transition:width 0.5s ease;"></div></div>` : '';
+  document.getElementById('qx-status-box').innerHTML=`<div class="qx-status ${type}"><div style="display:flex;align-items:center;gap:9px;width:100%;">${sp}<span style="flex:1;font-size:12.5px;">${msg}</span></div>${bar}</div>`;
+}
+
+function renderQxResult(qrisStr, imgSrc) {
+  const info = parseQRISInfo(qrisStr);
+  const tlv = parseTLV(qrisStr);
+  const poi = tlv['01']==='11'?'Static':'Dynamic';
+  const currency = tlv['53']||'';
+  const country = tlv['58']||'';
+  const city = tlv['60']||'';
+  const postal = tlv['61']||'';
+  const amount = tlv['54']||'';
+  const crcOk = verifyCRC(qrisStr);
+
+  const panel = document.getElementById('qx-result-panel');
+  panel.style.display = '';
+  panel.innerHTML = `
+    <div class="qx-result">
+      <div class="qx-result-header">
+        <div>🔳</div>
+        <div class="qx-result-title">${escHtml(info.name||'Unknown Merchant')}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);">${poi}</div>
+      </div>
+      <div class="qx-field"><div class="qx-field-label">Merchant Name</div><div class="qx-field-value">${escHtml(info.name||'—')}</div></div>
+      <div class="qx-field"><div class="qx-field-label">NMID</div><div class="qx-field-value" style="font-family:monospace;">${escHtml(info.nmid||'—')}</div></div>
+      <div class="qx-field"><div class="qx-field-label">Type</div><div class="qx-field-value ${poi==='Static'?'green':'amber'}">${poi} QRIS</div></div>
+      ${amount?`<div class="qx-field"><div class="qx-field-label">Amount</div><div class="qx-field-value">${fmtRp(parseFloat(amount))}</div></div>`:''}
+      ${city?`<div class="qx-field"><div class="qx-field-label">City</div><div class="qx-field-value">${escHtml(city)}${postal?' '+postal:''}</div></div>`:''}
+      ${country?`<div class="qx-field"><div class="qx-field-label">Country</div><div class="qx-field-value">${escHtml(country)}</div></div>`:''}
+      <div class="qx-field"><div class="qx-field-label">CRC Checksum</div><div class="qx-field-value ${crcOk?'green':'red'}">${crcOk?'✓ Valid':'✗ Invalid'}</div></div>
+      <div class="qx-field">
+        <div class="qx-field-label">Raw QRIS String</div>
+        <div class="qx-field-value mono" id="qx-raw-string">${escHtml(qrisStr)}</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:6px;">
+          <button class="qx-copy-btn" id="qx-copy-btn" onclick="qxCopyString('${escHtml(qrisStr).replace(/'/g,"\\'")}')">📋 Copy String</button>
+          <button class="qx-copy-btn" onclick="qxSaveToLibrary('${escHtml(qrisStr).replace(/'/g,"\\'")}','${escHtml(info.name||'').replace(/'/g,"\\'")}','${escHtml(info.nmid||'').replace(/'/g,"\\'")}')">💾 Save to Library</button>
+          <button class="qx-copy-btn" onclick="qxUseInSplitpay('${escHtml(qrisStr).replace(/'/g,"\\'")}')">🧾 Use in SplitPay</button>
+        </div>
+      </div>
+      <div class="qx-field">
+        <div class="qx-field-label">TLV Breakdown</div>
+        <table class="qx-tlv-table">
+          <tbody id="qx-tlv-body"></tbody>
+        </table>
+      </div>
+    </div>`;
+
+  // Render TLV
+  const tbody = document.getElementById('qx-tlv-body');
+  const TAG_NAMES = {'00':'Payload Format','01':'Point of Initiation','02-45':'Merchant Account','52':'Merchant Category','53':'Currency','54':'Amount','55':'Tip','58':'Country','59':'Merchant Name','60':'City','61':'Postal Code','62':'Additional Data','63':'CRC','64':'Merchant Info Language','65-79':'Unreserved'};
+  Object.entries(tlv).forEach(([tag,val]) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${tag}</td><td>${escHtml(val.length>60?val.substring(0,60)+'…':val)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderRawQR(raw) {
+  const panel = document.getElementById('qx-result-panel');
+  panel.style.display = '';
+  panel.innerHTML = `
+    <div class="qx-result">
+      <div class="qx-result-header"><div>🔳</div><div class="qx-result-title">QR Code Decoded</div><div style="font-size:11px;color:rgba(255,255,255,0.5);">Not a QRIS</div></div>
+      <div class="qx-field"><div class="qx-field-label">QR Content</div><div class="qx-field-value mono">${escHtml(raw)}</div>
+        <button class="qx-copy-btn" style="margin-top:8px;" onclick="navigator.clipboard.writeText(${JSON.stringify(raw)}).catch(()=>{})">📋 Copy</button>
+      </div>
+    </div>`;
+}
+
+function qxCopyString(str) {
+  navigator.clipboard.writeText(str).then(()=>{
+    const btn = document.getElementById('qx-copy-btn');
+    if(btn){btn.textContent='✓ Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='📋 Copy String';btn.classList.remove('copied');},2000);}
+  }).catch(()=>{});
+}
+
+function qxSaveToLibrary(str, name, nmid) {
+  addToQxLibrary({string:str, name:name, nmid:nmid});
+  alert(`✓ Saved "${name}" to library!`);
+  refreshHome();
+}
+
+function qxUseInSplitpay(str) {
+  document.getElementById('qris-input').value = str;
+  validateQRIS();
+  navTo('splitpay');
+  switchQrisTab('paste');
+}
+
+function verifyCRC(qris) {
+  const ci = qris.lastIndexOf('6304');
+  if(ci===-1) return false;
+  const body = qris.substring(0,ci+4);
+  const expected = crc16(body).toString(16).toUpperCase().padStart(4,'0');
+  const actual = qris.substring(ci+4,ci+8).toUpperCase();
+  return expected === actual;
+}
+
+// ══════════════════════════════════════════════════════════════
+// SPLITPAY STATE
+// ══════════════════════════════════════════════════════════════
+let currentStep = 1;
+let personNames = ['You', 'Friend 1'];
+let items = [];
+let receiptBase64 = null;
+let receiptMime = 'image/jpeg';
+let selectedPersonIdx = 0;
+let bankName = '';
+let bankAccNum = '';
+let bankBeneficiary = '';
+let useMultiQRIS = false;
+const MDR_LIMIT = 500000;
+let qrisList = [];
+
+const AVATAR_COLORS = ['#FF5733','#00C896','#FFB830','#6C63FF','#E91E8C','#00BCD4','#FF9800','#4CAF50'];
+const AVATAR_EMOJIS = ['😊','🙂','😎','🤩','🥳','😄','🤗','😁'];
+function getPeople(){return personNames.length;}
+function getColor(i){return AVATAR_COLORS[i%AVATAR_COLORS.length];}
+function getEmoji(i){return AVATAR_EMOJIS[i%AVATAR_EMOJIS.length];}
+
+// ══════════════════════════════════════════════════════════════
+// QRIS UTILITIES
+// ══════════════════════════════════════════════════════════════
+function crc16(s){let c=0xFFFF;for(let i=0;i<s.length;i++){c^=s.charCodeAt(i)<<8;for(let j=0;j<8;j++){c=(c&0x8000)?((c<<1)^0x1021):(c<<1);c&=0xFFFF;}}return c;}
+function isValidQRIS(s){return s&&s.startsWith('000201')&&s.includes('6304')&&s.length>30;}
+
+// --- FIX: Prevent duplicate 54 (amount) tags being added to QRIS ---
+function modifyQRISAmount(qris, amount) {
+    const ci = qris.lastIndexOf('6304');
+    if (ci === -1) throw new Error('No CRC');
+    let body = qris.substring(0, ci);
+
+    // Convert Static code to Dynamic
+    if(body.includes('010211')) body = body.replace('010211', '010212');
+
+    // Parse existing tags to find and cleanly remove an existing amount tag ('54')
+    const tlv = parseTLV(body);
+    if (tlv['54']) {
+        const amountStr = tlv['54'];
+        const oldTag = '54' + String(amountStr.length).padStart(2, '0') + amountStr;
+        body = body.replace(oldTag, '');
+    }
+
+    // Prepare new amount tag
+    const a = Math.round(amount).toString();
+    const tag = '54' + String(a.length).padStart(2, '0') + a;
+
+    // Inject intelligently
+    if (body.includes('5802ID')) body = body.replace('5802ID', tag + '5802ID');
+    else if (body.includes('5303360')) body = body.replace('5303360', '5303360' + tag);
+    else body += tag;
+
+    body += '6304';
+    return body + crc16(body).toString(16).toUpperCase().padStart(4, '0');
+}
+
+function parseTLV(str){const out={};let i=0;while(i+4<=str.length){const tag=str.substring(i,i+2);const len=parseInt(str.substring(i+2,i+4),10);if(isNaN(len)||i+4+len>str.length)break;out[tag]=str.substring(i+4,i+4+len);i+=4+len;}return out;}
+function parseQRISInfo(qris){if(!qris)return{name:'',nmid:''};try{const tlv=parseTLV(qris);const name=tlv['59']||'';let nmid='';const s51=tlv['51']?parseTLV(tlv['51']):null;if(s51&&s51['01'])nmid=s51['01'];if(!nmid){for(let t=26;t<=45;t++){const tk=String(t).padStart(2,'0');if(tlv[tk]){const sub=parseTLV(tlv[tk]);if(sub['01']){nmid=sub['01'];break;}}}}return{name,nmid};}catch(e){return{name:'',nmid:''};}}
+
+const DEMO_QRIS='00020101021126570011ID.DANA.WWW011893600915357561930214+628129920234190303UMI51440014ID.CO.QRIS.WWW0215ID10200957756190303UMI5204481453033605802ID5907DEMO OK6007JAKARTA6105123456304B73D';
+const DEFAULT_QRIS='00020101021126610014COM.GO-JEK.WWW01189360091434760206350210G4760206350303UMI51440014ID.CO.QRIS.WWW0215ID10243565701000303UMI5204573253033605802ID5924Athallah Nadhif Argyanta6009MOJOKERTO61056136362070703A01630446A8';
+
+function loadDemo(){switchQrisTab('paste');document.getElementById('qris-input').value=DEMO_QRIS;validateQRIS();}
+function switchQrisTab(tab){
+  ['upload','paste','library'].forEach(t=>{
+    document.getElementById('qris-tab-'+t).style.display=t===tab?'':'none';
+    document.getElementById('tab-'+t).className='tab-btn'+(t===tab?' active':'');
+  });
+  if(tab==='library')renderSpLibraryList();
+}
+function validateQRIS(){
+  const v=document.getElementById('qris-input').value.trim();
+  const fb=document.getElementById('qris-feedback');
+  if(!v){fb.innerHTML='';return false;}
+  if(isValidQRIS(v)){
+    const info=parseQRISInfo(v);
+    const nameStr=info.name?`<strong>${info.name}</strong>`:'—';
+    fb.innerHTML=`<div class="qris-ok"><div class="g-dot"></div><div><div style="font-weight:600;">Valid QRIS ✓</div><div style="font-size:11px;margin-top:2px;opacity:0.8;">Name: ${nameStr} &nbsp;·&nbsp; NMID: ${info.nmid||'—'}</div></div></div>`;
+    return true;
+  }
+  fb.innerHTML=`<div style="color:#c0392b;font-size:12px;margin-top:7px;">⚠ Doesn't look like a valid QRIS.</div>`;
+  return false;
+}
+
+// QRIS image decode
+async function handleQrisImage(input){
+  const file=input.files[0];if(!file)return;
+  const mime=file.type||'image/png';
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    const imgSrc=e.target.result,b64=imgSrc.split(',')[1];
+    const zone=document.getElementById('qris-upload-zone');
+    zone.innerHTML='';zone.style.padding='10px';
+    const wrap=document.createElement('div');wrap.className='qris-preview-wrap';
+    const thumb=document.createElement('img');thumb.src=imgSrc;thumb.className='qris-preview-thumb';
+    const info=document.createElement('div');info.style.cssText='text-align:left;';
+    info.innerHTML=`<div style="font-weight:600;font-size:13px;">QRIS image loaded</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Tap to change</div>`;
+    wrap.appendChild(thumb);wrap.appendChild(info);zone.appendChild(wrap);
+    const ni=document.createElement('input');ni.type='file';ni.accept='image/*';
+    ni.style.cssText='position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;';
+    ni.onchange=function(){handleQrisImage(this);};zone.appendChild(ni);
+
+    // Step 1: ZXing pixel decode (fast, local)
+    showQrisScanStatus('scanning','Step 1/2 — Scanning pixels locally…', 20);
+    
+    try {
+      const r = await decodeQRWithZXing(imgSrc);
+      if(r&&isValidQRIS(r)){
+        setQrisString(r);
+        showQrisScanStatus('success','✓ QRIS decoded instantly!', 100);
+        return;
+      }
+      if(r){
+        showQrisScanStatus('error','⚠ QR code found but not a valid QRIS format.');
+        return;
+      }
+
+      // Step 2: AI fallback with live countdown
+      showQrisScanStatus('scanning','Step 2/2 — Sending to AI (up to 15s)…', 30);
+      let elapsed=0;
+      const countdownTimer=setInterval(()=>{
+        elapsed++;
+        const pct=Math.min(88, 30+(elapsed/15)*58);
+        const remaining=Math.max(0,15-elapsed);
+        showQrisScanStatus('scanning',`Step 2/2 — AI decoding… ${remaining}s remaining`, Math.round(pct));
+        if(elapsed>=15) clearInterval(countdownTimer);
+      },1000);
+
+      const ai=await Promise.race([
+        extractQrisFromImageAI(b64,mime),
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),15000))
+      ]);
+      clearInterval(countdownTimer);
+
+      if(ai&&isValidQRIS(ai)){
+        setQrisString(ai);
+        showQrisScanStatus('success','✓ QRIS extracted via AI!', 100);
+      } else {
+        showQrisScanStatus('error','⚠ Could not decode. Try: crop to just the QR code, better lighting, or use Paste tab.');
+      }
+    } catch(err) {
+      if(err.message==='timeout'){
+        showQrisScanStatus('error','⏱ Timed out after 15s. Crop closer to the QR code or paste the string manually.');
+      } else {
+        console.error("QRIS AI Error:", err);
+        showQrisScanStatus('error','⚠ Failed: '+err.message+'. Use the Paste tab instead.');
+      }
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// --- NEW: Local QR decoding using ZXing library ---
+async function decodeQRWithZXing(imgSrc) {
+  try {
+    const codeReader = new ZXingBrowser.BrowserQRCodeReader();
+    const img = new Image();
+    img.src = imgSrc;
+    await new Promise(resolve => {
+        img.onload = resolve;
+        img.onerror = () => resolve(null);
+    });
+    
+    const result = await codeReader.decodeFromImageElement(img);
+    return result.getText().trim();
+  } catch (err) {
+    return null; // Ignore scan errors
+  }
+}
+
+function setQrisString(str){document.getElementById('qris-input').value=str;validateQRIS();}
+function showQrisScanStatus(type, msg, progress=null){
+  const sp = type==='scanning'?'<div class="ocr-spinner"></div>':
+             type==='success' ?'<span style="font-size:15px;">✅</span>':
+             type==='error'   ?'<span style="font-size:15px;">⚠️</span>':'';
+  const bar = progress!==null ? `<div style="width:100%;height:4px;background:rgba(0,0,0,0.08);border-radius:2px;margin-top:7px;overflow:hidden;"><div style="height:100%;width:${progress}%;background:${type==='success'?'#00C896':type==='error'?'#ff8877':'var(--amber)'};border-radius:2px;transition:width 0.5s ease;"></div></div>` : '';
+  document.getElementById('qris-scan-status-box').innerHTML=`<div class="qris-scan-status ${type}"><div style="display:flex;align-items:center;gap:9px;width:100%;">${sp}<span style="flex:1;font-size:12.5px;">${msg}</span></div>${bar}</div>`;
+}
+
+// --- API KEY CONFIGURATION ---
+const apiKey = ""; // The execution environment provides the key at runtime.
+
+// --- Helper for Retries ---
+async function fetchWithBackoff(url, options, retries = 5) {
+  const delays = [1000, 2000, 4000, 8000, 16000];
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const resp = await fetch(url, options);
+      if (!resp.ok) {
+         const errorData = await resp.json().catch(() => ({}));
+         throw new Error(errorData.error?.message || `HTTP error ${resp.status}`);
+      }
+      return await resp.json();
+    } catch (err) {
+      if (i === retries) throw err;
+      await new Promise(r => setTimeout(r, delays[i]));
+    }
+  }
+}
+
+// --- FIXED: AI API hit directly to Gemini using proper model, camelCase (inlineData), and backoff ---
+async function extractQrisFromImageAI(b64, mime) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+  const options = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        role: "user",
+        parts: [
+          { text: 'Decode this QRIS QR code. Return ONLY the raw data string starting with "000201". No explanation. If cannot decode, return CANNOT_READ' },
+          { inlineData: { mimeType: mime, data: b64 } } 
+        ]
+      }]
+    })
+  };
+  
+  const data = await fetchWithBackoff(url, options);
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().replace(/\s+/g, '') || '';
+  return (text === 'CANNOT_READ' || !text) ? null : text;
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// Receipt OCR
+async function handleFile(input){
+  const file=input.files[0];if(!file)return;
+  receiptMime=file.type||'image/jpeg';
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    receiptBase64=e.target.result.split(',')[1];
+    const imgSrc=e.target.result;
+    // Show preview with retake/change buttons overlay
+    const zone=document.getElementById('upload-zone');
+    zone.innerHTML=`
+      <div class="receipt-preview-wrap">
+        <img src="${imgSrc}" alt="Receipt">
+        <div class="receipt-change-btn">
+          <label class="cam-lbl">
+            <input type="file" accept="image/*" capture="environment" onchange="handleFile(this)" style="display:none;">
+            📷 Retake
+          </label>
+          <label class="gal-lbl">
+            <input type="file" accept="image/*" onchange="handleFile(this)" style="display:none;">
+            🖼️ Change
+          </label>
+        </div>
+      </div>`;
+    showOcrStatus('scanning','🔍 Reading receipt with AI…');
+    try{
+        const result=await callOCR(receiptBase64,receiptMime);
+        showOcrStatus('success',`✓ ${result.items.length} items · ${result.store_name||'Receipt'} · Tax: ${formatTaxStatus(result.tax_status)}`);
+        applyOCR(result);
+        setTimeout(()=>goStep(3),600);
+    }
+    catch(err){
+        console.error("Receipt OCR Error:", err); // Added this so you can see the real error!
+        showOcrStatus('error','⚠ Could not read. Check developer console.');
+        setTimeout(()=>{items=[{name:'',price:0,qty:1,assignedTo:'all'},{name:'',price:0,qty:1,assignedTo:'all'}];renderAll();goStep(3);},2500);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+function formatTaxStatus(s){return s==='included'?'in prices':s==='excluded'?'separate':'none';}
+function showOcrStatus(type,msg){const sp=type==='scanning'?'<div class="ocr-spinner"></div>':'';document.getElementById('ocr-status-box').innerHTML=`<div class="ocr-status ${type}">${sp}<span>${msg}</span></div>`;}
+
+// --- FIXED: AI API hit directly to Gemini using proper model, camelCase AND asking for qty ---
+async function callOCR(b64, mime) {
+  // FIXED logic bug: We added "qty": number to the expected prompt so it reads "5x 30000" correctly!
+  const promptText = `Analyze receipt, return JSON: {"store_name": "string", "items": [{"name": "string", "qty": number, "price": number}], "subtotal": number, "discount": number, "tax_amount": number, "tax_rate": number, "total": number, "tax_status": "included"|"excluded"|"none", "tax_note": "string"}. Extract the unit price for 'price'. Return ONLY JSON without markdown.`;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+  const options = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        role: "user",
+        parts: [
+          { text: promptText },
+          { inlineData: { mimeType: mime, data: b64 } } 
+        ]
+      }],
+      generationConfig: {
+        responseMimeType: "application/json" 
+      }
+    })
+  };
+  
+  const data = await fetchWithBackoff(url, options);
+  
+  // Clean markdown blocks if Gemini accidentally wraps it
+  const cleanJson = data.candidates?.[0]?.content?.parts?.[0]?.text?.replace(/```json|```/g, '').trim() || '{}';
+  return JSON.parse(cleanJson);
+}
+
+function applyOCR(r){
+  // FIXED logic bug: We now grab the qty from the AI result (or default to 1)
+  items=(r.items||[]).filter(i=>i.price>0||i.name).map(i=>({
+    name:i.name||'',
+    price:parseFloat(i.price)||0,
+    qty:parseInt(i.qty)||1,
+    assignedTo:'all'
+  }));
+  
+  if(!items.length)items=[{name:'',price:0,qty:1,assignedTo:'all'}];
+  if(r.discount>0)document.getElementById('discount-input').value=r.discount;
+  const toggle=document.getElementById('tax-included'),note=document.getElementById('tax-ai-note'),extra=document.getElementById('tax-extra'),taxAmt=document.getElementById('tax-amount');
+  if(r.tax_status==='included'){toggle.checked=true;extra.style.display='none';note.innerHTML=`<div class="tax-detect-info ai">🤖 AI: Tax included. ${r.tax_note||''}</div>`;}
+  else if(r.tax_status==='excluded'){toggle.checked=false;extra.style.display='';if(r.tax_amount>0)taxAmt.value=r.tax_amount;note.innerHTML=`<div class="tax-detect-info warn">🤖 AI: Tax Rp${fmtRp(r.tax_amount)} separate. ${r.tax_note||''}</div>`;}
+  else{toggle.checked=false;extra.style.display='none';note.innerHTML=`<div class="tax-detect-info">🤖 AI: No tax. ${r.tax_note||''}</div>`;}
+  if(r.store_name){document.getElementById('store-header-box').innerHTML=`<div class="store-hdr"><div class="store-icon">🏪</div><div><div class="store-name-txt">${escHtml(r.store_name)}</div><div class="store-sub-txt">${items.length} items · ${fmtRp(r.total||0)}</div></div></div>`;}
+  renderAll();updateSummary();
+}
+
+// Sample receipts
+const SAMPLE_RECEIPTS={kopi_calf:{store_name:'Kopi Calf',items:[{name:'Calf Premium Can (Less Sugar)',price:36000},{name:'Calf Premium Can (No Sugar)',price:36000},{name:'Calf Smooth',price:33000},{name:'Es Kopi Calf Premium',price:25000},{name:'Aromatic Milk Tea',price:32900}],subtotal:162900,discount:87200,tax_amount:0,tax_rate:0,total:75700,tax_status:'none',tax_note:'No tax.'},papaya:{store_name:'Papaya Fresh Gallery',items:[{name:'Den Iyuijitsu Yasai 890ml',price:67900},{name:'Shodri Japanese Soy Sauce',price:60200},{name:'Harasa Bumbu Shabu 406g',price:13000},{name:'Samgaria Gran Tea Milk x2',price:37800},{name:'Dydo Blend Coffee 150g',price:20000},{name:'Bich Chi Pho Noodle 200g',price:22700},{name:'Nippon Ninka Lager 350ml',price:28000},{name:'Tominaga Kobe Milk Tea',price:18900},{name:'Ito Kyuemon Uji 200g',price:38900},{name:'Mr Muscle Apple 400ml',price:5000},{name:'Bulldog Tonkatsu 300ml',price:44900},{name:'Mermaid Katsuo 120g',price:38000},{name:'Mermaid Saba Misoni 120g',price:38500},{name:'Mermaid Sanma 120g',price:41900},{name:'Harasa Kontbutsuyu 50g',price:14000},{name:'Selsun Conditioner 100g',price:30500},{name:'Biore Hand Soap 250ml',price:22000}],subtotal:541200,discount:2000,tax_amount:53632,tax_rate:11,total:541200,tax_status:'excluded',tax_note:'Tax Rp53.632 separate.'},aeon:{store_name:'AEON Tanjung Barat',items:[{name:'Tauge 200gr',price:15000},{name:'Paseo Towel 3rol',price:34010},{name:'Pld Bibim II 13',price:20900},{name:'Reg Mix Fruit',price:33250},{name:'Fresh Bites Mix',price:14250},{name:'Jahe',price:36053},{name:'Danmuti',price:27742},{name:'Ultra Plain 100',price:18810},{name:'Dua Belibis SC',price:15000},{name:'Kokita Cuka',price:7410},{name:'Mc Red Miso 300',price:36100},{name:'BB SB Sach 200g',price:8550},{name:'Orchid BTT UNSL',price:47500},{name:'Kanesu Mch Soba',price:72200},{name:'Akagi Shokuhin',price:27550},{name:'Iom JB GRG x4',price:15200},{name:'Nissin Kyushu B',price:10355},{name:'Beef Komagire',price:43640},{name:'Short Plte Slic',price:30353},{name:'Ise Egg PRM 10S',price:37810},{name:'Sevaka Low CL',price:36100},{name:'Johnson Baby BE',price:24510},{name:'WSL P MSNCC 500',price:38000},{name:'Bagus YMZK 530',price:65360},{name:'Scotch B I060 x2',price:28120},{name:'TPKUKI SH GRN 5',price:133760},{name:'Multi FLCTS1000',price:34675}],subtotal:912418,discount:0,tax_amount:121493,tax_rate:11,total:912418,tax_status:'excluded',tax_note:'PATAK tax included in total.'}};
+
+function loadSampleReceipt(key){const r=SAMPLE_RECEIPTS[key];if(!r)return;const zone=document.getElementById('upload-zone');zone.innerHTML=`<div style="padding:14px 0;text-align:center;"><div style="font-size:30px;margin-bottom:7px;">🧾</div><div style="font-family:'Syne',sans-serif;font-weight:800;font-size:14px;">${r.store_name}</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${r.items.length} items loaded</div></div>`;const ni=document.createElement('input');ni.type='file';ni.accept='image/*';ni.capture='environment';ni.style.cssText='position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;';ni.onchange=function(){handleFile(this);};zone.style.position='relative';zone.appendChild(ni);showOcrStatus('success',`✓ Sample: ${r.store_name}`);applyOCR(r);setTimeout(()=>goStep(3),400);}
+function skipToManual(){items=[{name:'',price:0,qty:1,assignedTo:'all'},{name:'',price:0,qty:1,assignedTo:'all'}];renderAll();goStep(3);}
+function onTaxToggle(){document.getElementById('tax-extra').style.display=document.getElementById('tax-included').checked?'none':'';updateSummary();}
+
+// People
+function renderPeople(){const grid=document.getElementById('people-grid');grid.innerHTML='';personNames.forEach((name,i)=>{const row=document.createElement('div');row.className='person-row';row.innerHTML=`<div class="person-avatar" style="background:${getColor(i)}">${getEmoji(i)}</div><input type="text" placeholder="Name" value="${escHtml(name)}" oninput="personNames[${i}]=this.value;renderItemAssignChips()" style="flex:1;">${personNames.length>2?`<button class="person-del" onclick="removePerson(${i})">×</button>`:'<div style="width:28px;flex-shrink:0;"></div>'}`;grid.appendChild(row);});renderItemAssignChips();}
+function addPerson(){if(personNames.length>=8){alert('Max 8');return;}personNames.push('Friend '+personNames.length);renderPeople();updateSummary();}
+function removePerson(i){personNames.splice(i,1);items.forEach(it=>{if(Array.isArray(it.assignedTo)){it.assignedTo=it.assignedTo.filter(x=>x!==i).map(x=>x>i?x-1:x);if(!it.assignedTo.length)it.assignedTo='all';}});renderPeople();renderItems();updateSummary();}
+
+// Items
+function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
+function renderItems(){const list=document.getElementById('items-list');list.innerHTML='';items.forEach((it,i)=>{const card=document.createElement('div');card.className='item-card';const lt=(it.price||0)*(it.qty||1);card.innerHTML=`<div class="item-card-top"><input class="item-name-input" type="text" placeholder="Item name" value="${escHtml(it.name)}" oninput="items[${i}].name=this.value"><button class="btn btn-ghost btn-icon-sm" onclick="removeItem(${i})" style="color:#c0392b;border-color:transparent;background:transparent;">✕</button></div><div class="item-card-mid"><div style="flex:1;"><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;">Unit Price</div><div class="pfx" style="position:relative;"><span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:600;color:var(--muted);">Rp</span><input type="number" placeholder="0" value="${it.price||''}" min="0" oninput="items[${i}].price=parseFloat(this.value)||0;updateItemTotal(${i})" inputmode="numeric" style="padding:8px 9px 8px 26px;font-size:13.5px;width:100%;text-align:right;"></div></div><div style="flex-shrink:0;text-align:center;"><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;">Qty</div><div class="qty-stepper"><button class="qty-btn" onclick="changeQty(${i},-1)">−</button><div class="qty-val" id="qty-val-${i}">${it.qty||1}</div><button class="qty-btn" onclick="changeQty(${i},1)">+</button></div></div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:11px;color:var(--muted);">Line total</div><div style="font-size:12.5px;font-weight:700;" id="item-total-${i}">${fmtRp(lt)}</div></div><div class="assign-row" id="assign-row-${i}"></div>`;list.appendChild(card);renderAssignChipsForItem(i);});updateSummary();}
+function renderAssignChipsForItem(i){const row=document.getElementById('assign-row-'+i);if(!row)return;const it=items[i];const isAll=it.assignedTo==='all'||!Array.isArray(it.assignedTo)||!it.assignedTo.length;let html=`<span class="assign-lbl">Who:</span><button class="assign-chip all-chip${isAll?' selected':''}" onclick="toggleAssignAll(${i})"><div class="chip-dot" style="background:${isAll?'rgba(255,255,255,0.3)':AVATAR_COLORS[0]}">🤝</div>All</button>`;personNames.forEach((name,pi)=>{const sel=!isAll&&Array.isArray(it.assignedTo)&&it.assignedTo.includes(pi);html+=`<button class="assign-chip${sel?' selected':''}" onclick="toggleAssignPerson(${i},${pi})"><div class="chip-dot" style="background:${getColor(pi)}">${getEmoji(pi)}</div>${escHtml(name.split(' ')[0]||'P'+(pi+1))}</button>`;});row.innerHTML=html;}
+function renderItemAssignChips(){items.forEach((_,i)=>renderAssignChipsForItem(i));}
+function renderAll(){renderPeople();renderItems();}
+function toggleAssignAll(i){items[i].assignedTo='all';renderAssignChipsForItem(i);updateSummary();}
+function toggleAssignPerson(i,pi){let a=items[i].assignedTo;if(a==='all')a=[];if(!Array.isArray(a))a=[];a=a.includes(pi)?a.filter(x=>x!==pi):[...a,pi];if(!a.length)a='all';items[i].assignedTo=a;renderAssignChipsForItem(i);updateSummary();}
+function changeQty(i,d){items[i].qty=Math.max(1,Math.min(99,(items[i].qty||1)+d));const v=document.getElementById('qty-val-'+i);if(v)v.textContent=items[i].qty;updateItemTotal(i);}
+function updateItemTotal(i){const el=document.getElementById('item-total-'+i);if(el)el.textContent=fmtRp((items[i].price||0)*(items[i].qty||1));updateSummary();}
+function addItem(){items.push({name:'',price:0,qty:1,assignedTo:'all'});renderItems();}
+function removeItem(i){items.splice(i,1);renderItems();}
+
+// Calculations
+function fmtRp(n){return'Rp '+Math.round(n).toLocaleString('id-ID');}
+function getItemLineTotal(it){return(it.price||0)*(it.qty||1);}
+function calcPersonAmounts(){const n=getPeople();const personSubtotals=Array(n).fill(0);items.forEach(it=>{const lt=getItemLineTotal(it);if(it.assignedTo==='all'||!Array.isArray(it.assignedTo)||!it.assignedTo.length){for(let p=0;p<n;p++)personSubtotals[p]+=lt/n;}else{const a=it.assignedTo.filter(x=>x<n);if(!a.length){for(let p=0;p<n;p++)personSubtotals[p]+=lt/n;}else{const share=lt/a.length;a.forEach(pi=>personSubtotals[pi]+=share);}}});const rawSubtotal=personSubtotals.reduce((a,b)=>a+b,0);const discount=parseFloat(document.getElementById('discount-input').value)||0;const taxIncluded=document.getElementById('tax-included').checked;const taxAmt=taxIncluded?0:(parseFloat(document.getElementById('tax-amount').value)||0);const grandTotal=Math.max(0,rawSubtotal-discount+taxAmt);const personTotals=personSubtotals.map(sub=>{const ratio=rawSubtotal>0?sub/rawSubtotal:1/n;return Math.max(0,sub-discount*ratio+taxAmt*ratio);});return{personSubtotals,personTotals,rawSubtotal,discount,taxIncluded,taxAmt,grandTotal};}
+function getNumbers(){const{grandTotal,personTotals}=calcPersonAmounts();const avg=personTotals.reduce((a,b)=>a+b,0)/getPeople();return{total:grandTotal,perPerson:Math.ceil(avg)};}
+function updateSummary(){const{total,perPerson}=getNumbers();document.getElementById('sum-total').textContent=fmtRp(total);document.getElementById('sum-ppl').textContent=getPeople();document.getElementById('sum-per').textContent=fmtRp(perPerson);if(useMultiQRIS)updateRoutingPreview();}
+
+// Navigation (SplitPay)
+function goStep(n){
+  document.querySelectorAll('.sp-step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('step-'+n).classList.add('active');
+  ['ch1','ch2','ch3','ch4'].forEach((id,idx)=>{const el=document.getElementById(id);if(el){el.className='sp-chip';if(idx+1<n)el.classList.add('done');else if(idx+1===n)el.classList.add('active-chip');}});
+  document.getElementById('btn-back').style.display=n>1?'':'none';
+  document.getElementById('btn-next').textContent=n===4?'✓ Done':'Continue →';
+  document.getElementById('sp-step-badge').textContent='Step '+n+' of 4';
+  currentStep=n;
+  // Scroll to top of screen
+  document.getElementById('screen-splitpay').scrollTo({top:0,behavior:'smooth'});
+  if(n===4){selectedPersonIdx=0;buildResult();}
+}
+function goNext(){
+  if(currentStep===1){const v=document.getElementById('qris-input').value.trim();if(v&&!isValidQRIS(v)){alert('QRIS invalid.');return;}goStep(2);}
+  else if(currentStep===2){items=[{name:'',price:0,qty:1,assignedTo:'all'},{name:'',price:0,qty:1,assignedTo:'all'}];renderAll();goStep(3);}
+  else if(currentStep===3){const{total}=getNumbers();if(total<=0){alert('Enter at least one item.');return;}goStep(4);}
+  else{if(confirm('Start new split?')){items=[{name:'',price:0,qty:1,assignedTo:'all'},{name:'',price:0,qty:1,assignedTo:'all'}];renderAll();updateSummary();goStep(1);}}
+}
+function goBack(){if(currentStep>1)goStep(currentStep-1);}
+
+// Multi-QRIS
+function toggleMultiQRIS(enabled){useMultiQRIS=enabled;const panel=document.getElementById('multi-qris-panel');panel.style.display=enabled?'':'none';if(enabled&&!qrisList.length){const existing=document.getElementById('qris-input').value.trim();qrisList=[{label:'QRIS #1',string:existing,dailyUsed:0},{label:'QRIS #2',string:'',dailyUsed:0}];renderQRISList();}updateRoutingPreview();}
+function addQRISSlot(){if(qrisList.length>=6){alert('Max 6');return;}qrisList.push({label:`QRIS #${qrisList.length+1}`,string:'',dailyUsed:0});renderQRISList();updateRoutingPreview();}
+function removeQRISSlot(i){if(qrisList.length<=2){alert('Keep at least 2');return;}qrisList.splice(i,1);renderQRISList();updateRoutingPreview();}
+function renderQRISList(){const c=document.getElementById('qris-list-container');c.innerHTML='';qrisList.forEach((q,i)=>{const used=q.dailyUsed||0;const pct=Math.min(100,(used/MDR_LIMIT)*100);const isFull=used>=MDR_LIMIT;const isWarn=pct>=70&&!isFull;const barCls=isFull?'full':isWarn?'warn':'ok';const slotCls=isFull?'full-slot':(isValidQRIS(q.string)?'active-slot':'');const el=document.createElement('div');el.className=`qris-entry ${slotCls}`;el.innerHTML=`<div class="qris-entry-header"><div class="qris-slot-num">${i+1}</div><input type="text" placeholder="QRIS #${i+1}" value="${escHtml(q.label)}" oninput="qrisList[${i}].label=this.value;updateRoutingPreview()" style="background:transparent;border:none;padding:0;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:white;">${qrisList.length>2?`<button class="qris-slot-del" onclick="removeQRISSlot(${i})">×</button>`:''}</div><textarea placeholder="000201...6304XXXX" oninput="qrisList[${i}].string=this.value.trim();renderQRISList();updateRoutingPreview()">${escHtml(q.string)}</textarea><div style="display:flex;align-items:center;gap:7px;margin-top:5px;"><label style="display:flex;align-items:center;gap:5px;padding:4px 9px;background:rgba(255,255,255,0.07);border:1.5px dashed rgba(255,255,255,0.15);border-radius:8px;cursor:pointer;font-size:11px;color:rgba(255,255,255,0.5);">📷 Upload<input type="file" accept="image/*" style="display:none;" onchange="handleQRISSlotImage(this,${i})"></label>${isValidQRIS(q.string)?'<span style="font-size:11px;color:var(--green);">✓</span>':'<span style="font-size:11px;color:rgba(255,255,255,0.3);">—</span>'}</div><div class="slot-status"><span style="font-size:11px;color:rgba(255,255,255,0.38);">Daily:</span><div class="slot-bar-wrap"><div class="slot-bar-fill ${barCls}" style="width:${pct}%"></div></div><span style="font-size:10.5px;color:${isFull?'#FF9B7A':isWarn?'#FFD580':'rgba(255,255,255,0.45)'};">${fmtRp(used)}/${fmtRp(MDR_LIMIT)}</span>${used>0?`<button onclick="qrisList[${i}].dailyUsed=0;renderQRISList();updateRoutingPreview()" style="background:transparent;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:10px;">↺</button>`:''}</div>`;c.appendChild(el);});}
+async function handleQRISSlotImage(input,slotIdx){const file=input.files[0];if(!file)return;const mime=file.type||'image/png';const reader=new FileReader();reader.onload=async(e)=>{const imgSrc=e.target.result,b64=imgSrc.split(',')[1];try{const r=await decodeQRWithZXing(imgSrc);if(r&&isValidQRIS(r)){qrisList[slotIdx].string=r;renderQRISList();updateRoutingPreview();return;}const ai=await extractQrisFromImageAI(b64,mime);if(ai&&isValidQRIS(ai)){qrisList[slotIdx].string=ai;renderQRISList();updateRoutingPreview();}else{alert(`Slot ${slotIdx+1}: Paste the QRIS string manually.`);}}catch{alert(`Slot ${slotIdx+1}: Decode failed.`);}};reader.readAsDataURL(file);}
+function computeQRISAssignment(){if(!useMultiQRIS||!qrisList.length)return null;const{personTotals}=calcPersonAmounts();const n=getPeople();const assignment=new Array(n).fill(0);const slotLoaded=qrisList.map(q=>q.dailyUsed||0);const valid=qrisList.map(q=>isValidQRIS(q.string));for(let pi=0;pi<n;pi++){const amt=Math.ceil(personTotals[pi]);let assigned=false;for(let si=0;si<qrisList.length;si++){if(!valid[si])continue;if(slotLoaded[si]+amt<=MDR_LIMIT){assignment[pi]=si;slotLoaded[si]+=amt;assigned=true;break;}}if(!assigned){let best=0,bestR=-Infinity;for(let si=0;si<qrisList.length;si++){if(!valid[si])continue;const r=MDR_LIMIT-slotLoaded[si];if(r>bestR){bestR=r;best=si;}}assignment[pi]=best;slotLoaded[best]+=amt;}}return assignment;}
+function updateRoutingPreview(){const preview=document.getElementById('qris-routing-preview');if(!preview||!useMultiQRIS){if(preview)preview.innerHTML='';return;}const assignment=computeQRISAssignment();if(!assignment){preview.innerHTML='';return;}const{personTotals}=calcPersonAmounts();const n=getPeople();const groups={};assignment.forEach((si,pi)=>{if(!groups[si])groups[si]=[];groups[si].push(pi);});let html=`<div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:11px 13px;"><div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:9px;">ROUTING PLAN</div>`;Object.entries(groups).forEach(([si,people])=>{const slot=qrisList[si];const st=people.reduce((s,pi)=>s+Math.ceil(personTotals[pi]),0);const su=(slot.dailyUsed||0)+st;const pct=Math.min(100,(su/MDR_LIMIT)*100);const over=su>MDR_LIMIT;const names=people.map(pi=>personNames[pi]||`P${pi+1}`).join(', ');html+=`<div style="margin-bottom:7px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:11.5px;font-weight:600;color:white;">${slot.label} → ${names}</span><span style="font-size:11px;color:${over?'#FF9B7A':'rgba(255,255,255,0.45)'};">${fmtRp(st)}${over?` ⚠`:''}</span></div><div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;"><div style="height:100%;width:${pct}%;background:${over?'#FF5733':'#00C896'};border-radius:2px;"></div></div></div>`;});html+='</div>';preview.innerHTML=html;}
+function getQRISForPerson(pi){if(useMultiQRIS&&qrisList.length){const a=computeQRISAssignment();if(a){const si=a[pi];if(qrisList[si]&&isValidQRIS(qrisList[si].string))return qrisList[si].string;}}return document.getElementById('qris-input').value.trim();}
+function getQRISSlotForPerson(pi){if(!useMultiQRIS||!qrisList.length)return null;const a=computeQRISAssignment();if(!a)return null;return qrisList[a[pi]]||null;}
+
+// Build result
+function buildResult(){
+  const{personSubtotals,personTotals,rawSubtotal,discount,taxIncluded,taxAmt,grandTotal}=calcPersonAmounts();
+  const n=getPeople();
+  const tabsEl=document.getElementById('result-person-tabs');tabsEl.innerHTML='';
+  personNames.forEach((name,i)=>{const tab=document.createElement('button');tab.className='p-tab'+(i===selectedPersonIdx?' active':'');tab.onclick=()=>{selectedPersonIdx=i;buildResult();};tab.innerHTML=`<div class="p-tab-dot" style="background:${getColor(i)};">${getEmoji(i)}</div><span class="p-tab-name">${escHtml(name)}</span>`;tabsEl.appendChild(tab);});
+  const pi=selectedPersonIdx;const pName=personNames[pi]||('P'+(pi+1));
+  const pTotal=personTotals[pi]<1?0:Math.ceil(personTotals[pi]);
+
+  document.getElementById('result-person-label').textContent=pName+"'s share";
+  document.getElementById('result-per').textContent=fmtRp(pTotal);
+  document.getElementById('result-sub').textContent=`of ${fmtRp(grandTotal)} · ${n} people`;
+  document.getElementById('bd-person-name').textContent=pName+"'s items";
+  document.getElementById('bd-total-lbl').textContent=fmtRp(pTotal);
+
+  const rows=document.getElementById('breakdown-rows');rows.innerHTML='';
+  const addRow=(name,amt,cls='')=>{const r=document.createElement('div');r.className='bk-row '+cls;r.innerHTML=`<span class="bk-name">${name}</span><span class="bk-amt">${amt}</span>`;rows.appendChild(r);};
+  const addSH=(l)=>{const h=document.createElement('div');h.className='bk-section-head';h.textContent=l;rows.appendChild(h);};
+  const excItems=items.filter(it=>{if(it.assignedTo==='all'||!Array.isArray(it.assignedTo))return false;const a=it.assignedTo.filter(x=>x<n);return a.includes(pi)&&a.length===1;});
+  const groupItems=items.filter(it=>{if(it.assignedTo==='all'||!Array.isArray(it.assignedTo)||!it.assignedTo.length)return false;const a=it.assignedTo.filter(x=>x<n);return a.includes(pi)&&a.length>1&&a.length<n;});
+  const sharedItems=items.filter(it=>{if(it.assignedTo==='all'||!Array.isArray(it.assignedTo)||!it.assignedTo.length)return true;const a=it.assignedTo.filter(x=>x<n);return a.includes(pi)&&a.length===n;});
+  let hasRows=false;
+  if(excItems.length){addSH('Your items');excItems.forEach(it=>{addRow(`${escHtml(it.name||'—')}${it.qty>1?' ×'+it.qty:''}`,fmtRp(getItemLineTotal(it)));hasRows=true;});}
+  if(groupItems.length){addSH('Shared with group');groupItems.forEach(it=>{const a=it.assignedTo.filter(x=>x<n);const share=getItemLineTotal(it)/a.length;const names=a.map(x=>personNames[x]||('P'+(x+1))).join(', ');addRow(`${escHtml(it.name||'—')}${it.qty>1?' ×'+it.qty:''}<br><span style="font-size:10.5px;color:var(--muted);font-weight:400;">with ${names}</span>`,fmtRp(share));hasRows=true;});}
+  if(sharedItems.length){addSH('Split evenly (all '+n+')');sharedItems.forEach(it=>{const share=getItemLineTotal(it)/n;addRow(`${escHtml(it.name||'—')}${it.qty>1?' ×'+it.qty:''}`,fmtRp(share),'shared-r');hasRows=true;});}
+  if(!hasRows)addRow('No items assigned to '+pName,'—','sec');
+  const ratio=rawSubtotal>0?personSubtotals[pi]/rawSubtotal:1/n;
+  addRow('Person subtotal',fmtRp(personSubtotals[pi]),'sec');
+  if(discount>0)addRow('Discount share','− '+fmtRp(discount*ratio),'disc');
+  if(!taxIncluded&&taxAmt>0)addRow('Tax share','+ '+fmtRp(taxAmt*ratio),'tax-r');
+  addRow(pName+' pays',fmtRp(pTotal),'final');
+
+  // Slot badge
+  const slotBadge=document.getElementById('qris-slot-badge');slotBadge.innerHTML='';
+  const assignedSlot=getQRISSlotForPerson(pi);
+  if(assignedSlot&&pTotal>0){slotBadge.innerHTML=`<div class="qris-slot-tag" style="background:rgba(0,200,150,0.2);color:#00C896;border:1px solid rgba(0,200,150,0.3);">🔳 ${escHtml(assignedSlot.label)} (MDR-free)</div>`;}
+  const routingInfo=document.getElementById('qris-routing-info');
+  if(assignedSlot&&pTotal>0){routingInfo.style.display='';routingInfo.textContent=`Free remaining on this QRIS: ${fmtRp(Math.max(0,MDR_LIMIT-(assignedSlot.dailyUsed||0)-pTotal))}`;}
+  else routingInfo.style.display='none';
+
+  // QR Code
+  const qrDiv=document.getElementById('qr-container');qrDiv.innerHTML='';
+  const qrWrap=document.getElementById('qr-wrap');
+
+  if(pTotal<=0){
+    document.getElementById('result-per').textContent='Rp 0';
+    document.getElementById('result-sub').textContent='Nothing to pay! 🎉';
+    qrWrap.style.display='none';
+    document.getElementById('result-person-label').textContent=pName+" · all paid by others";
+    qrDiv.innerHTML='';
+    slotBadge.innerHTML=`<div class="qris-slot-tag" style="background:rgba(0,200,150,0.2);color:#00C896;border:1px solid rgba(0,200,150,0.3);font-size:13px;padding:6px 16px;">🎉 Nothing to pay!</div>`;
+    document.getElementById('btn-share').style.display='none';
+  } else {
+    qrWrap.style.display='';
+    document.getElementById('btn-share').style.display='';
+    try{
+      const qrisStr=getQRISForPerson(pi);
+      const qrData=(qrisStr&&isValidQRIS(qrisStr))?modifyQRISAmount(qrisStr,pTotal):`SPLITPAY|${pName}|${Math.round(pTotal)}|${Date.now()}`;
+      new QRCode(qrDiv,{text:qrData,width:190,height:190,colorDark:'#0F0E17',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M});
+    }catch(e){qrDiv.innerHTML='<div style="padding:18px;color:#aaa;font-size:12px;text-align:center;">⚠ QR error</div>';}
+  }
+}
+
+// Share receipt (canvas image)
+async function shareReceipt(){
+  const pi=selectedPersonIdx;const pName=personNames[pi]||('P'+(pi+1));const pColor=getColor(pi);const pEmoji=getEmoji(pi);
+  const{personSubtotals,personTotals,rawSubtotal,discount,taxIncluded,taxAmt,grandTotal}=calcPersonAmounts();
+  const n=getPeople();const pTotal=Math.ceil(personTotals[pi]);const ratio=rawSubtotal>0?personSubtotals[pi]/rawSubtotal:1/n;
+  const rawQRIS=getQRISForPerson(pi);const qrisInfo=parseQRISInfo(rawQRIS);const assignedSlot=getQRISSlotForPerson(pi);
+  const qrEl=document.querySelector('#qr-container canvas')||document.querySelector('#qr-container img');
+  const SCALE=2,W=600,PAD=36;
+  const excItems=items.filter(it=>{if(it.assignedTo==='all'||!Array.isArray(it.assignedTo))return false;const a=it.assignedTo.filter(x=>x<n);return a.includes(pi)&&a.length===1;});
+  const groupItems=items.filter(it=>{if(it.assignedTo==='all'||!Array.isArray(it.assignedTo)||!it.assignedTo.length)return false;const a=it.assignedTo.filter(x=>x<n);return a.includes(pi)&&a.length>1&&a.length<n;});
+  const sharedItems=items.filter(it=>{if(it.assignedTo==='all'||!Array.isArray(it.assignedTo)||!it.assignedTo.length)return true;const a=it.assignedTo.filter(x=>x<n);return a.includes(pi)&&a.length===n;});
+  const lines=[];
+  const buildLines=(arr,shared=false)=>arr.forEach(it=>{const a=Array.isArray(it.assignedTo)?it.assignedTo.filter(x=>x<n):[];const div=shared?n:(a.length>0?a.length:1);lines.push({type:'item',name:it.name||'—',qty:it.qty||1,unitPrice:it.price||0,amt:fmtRp(getItemLineTotal(it)/div),sub:a.length>1&&a.length<n?'with '+a.map(x=>personNames[x]||'P'+(x+1)).join(', '):null,shared});});
+  if(excItems.length){lines.push({type:'section',text:'Your items'});buildLines(excItems);}
+  if(groupItems.length){lines.push({type:'section',text:'Shared with group'});buildLines(groupItems);}
+  if(sharedItems.length){lines.push({type:'section',text:'Split evenly ('+n+')'});buildLines(sharedItems,true);}
+  if(!lines.filter(l=>l.type==='item').length)lines.push({type:'item',name:'(no items)',qty:1,unitPrice:0,amt:'—'});
+  if(discount>0)lines.push({type:'adj',name:'Discount share',amt:'− '+fmtRp(discount*ratio),green:true});
+  if(!taxIncluded&&taxAmt>0)lines.push({type:'adj',name:'Tax share',amt:'+ '+fmtRp(taxAmt*ratio),amber:true});
+  const LINE_H=46,SECTION_H=28,QR_SIZE=180;
+  const hasBankInfo=bankName||bankAccNum||bankBeneficiary;const hasQrisInfo=qrisInfo.name||qrisInfo.nmid;
+  const itemsH=lines.reduce((h,l)=>h+(l.type==='section'?SECTION_H:l.sub?LINE_H+14:LINE_H),0);
+  const H=150+98+22+itemsH+60+14+(hasQrisInfo?62:0)+QR_SIZE+52+(hasBankInfo?106:0)+76;
+  const canvas=document.getElementById('share-canvas');canvas.width=W*SCALE;canvas.height=H*SCALE;canvas.style.width='100%';canvas.style.height='auto';
+  const ctx=canvas.getContext('2d');ctx.scale(SCALE,SCALE);
+  // BG
+  const bgG=ctx.createLinearGradient(0,0,0,H);bgG.addColorStop(0,'#F7F5F2');bgG.addColorStop(1,'#EDE9E3');ctx.fillStyle=bgG;roundRect(ctx,0,0,W,H,24);ctx.fill();
+  // Header
+  const hG=ctx.createLinearGradient(0,0,W,150);hG.addColorStop(0,'#1A1830');hG.addColorStop(1,'#2a2548');ctx.fillStyle=hG;roundRect(ctx,0,0,W,150,24,24,0,0);ctx.fill();
+  ctx.fillStyle='rgba(255,87,51,0.14)';ctx.beginPath();ctx.arc(W-50,32,90,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='white';ctx.font=`900 24px 'Syne',sans-serif`;ctx.fillText('Pay',PAD,46);ctx.fillStyle='#FF5733';ctx.fillText('Kit',PAD+64,46);
+  ctx.fillStyle='rgba(255,255,255,0.35)';ctx.font=`400 10.5px 'DM Sans',sans-serif`;ctx.letterSpacing='1.5px';ctx.fillText('BILL FOR',PAD,76);ctx.letterSpacing='0px';
+  ctx.fillStyle=pColor;ctx.beginPath();ctx.arc(PAD+16,106,16,0,Math.PI*2);ctx.fill();
+  ctx.font='14px serif';ctx.textAlign='center';ctx.fillText(pEmoji,PAD+16,111);ctx.textAlign='left';
+  ctx.fillStyle='white';ctx.font=`800 20px 'Syne',sans-serif`;ctx.fillText(truncate(pName,28),PAD+40,114);
+  const now2=new Date();ctx.fillStyle='rgba(255,255,255,0.32)';ctx.font=`400 10.5px 'DM Sans',sans-serif`;ctx.textAlign='right';ctx.fillText(now2.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}),W-PAD,114);ctx.textAlign='left';
+  if(assignedSlot){const tag=`🔳 ${assignedSlot.label}`;ctx.fillStyle='rgba(0,200,150,0.25)';const tw=ctx.measureText(tag).width+18;roundRect(ctx,PAD,128,tw,18,5);ctx.fill();ctx.fillStyle='#00C896';ctx.font=`600 10px 'DM Sans',sans-serif`;ctx.fillText(tag,PAD+9,140);}
+  let y=150+20;
+  // Amount box
+  ctx.fillStyle='rgba(255,87,51,0.09)';roundRect(ctx,PAD,y,W-PAD*2,96,15);ctx.fill();ctx.strokeStyle='rgba(255,87,51,0.18)';ctx.lineWidth=1.5;roundRect(ctx,PAD,y,W-PAD*2,96,15);ctx.stroke();
+  ctx.fillStyle='#9A95A8';ctx.font=`600 10px 'DM Sans',sans-serif`;ctx.letterSpacing='1.5px';ctx.fillText('AMOUNT TO PAY',PAD+13,y+17);ctx.letterSpacing='0px';
+  ctx.fillStyle='#0F0E17';ctx.font=`900 38px 'Syne',sans-serif`;ctx.fillText(fmtRp(pTotal),PAD+13,y+55);
+  ctx.fillStyle='#9A95A8';ctx.font=`400 11px 'DM Sans',sans-serif`;ctx.fillText(`of ${fmtRp(grandTotal)} · ${n} people`,PAD+13,y+72);
+  y+=98+14;
+  // Items
+  ctx.strokeStyle='#E0DDD8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PAD,y);ctx.lineTo(W-PAD,y);ctx.stroke();
+  ctx.fillStyle='#B0ADB8';ctx.font=`600 10px 'DM Sans',sans-serif`;ctx.letterSpacing='1px';ctx.fillText('BREAKDOWN',PAD,y+16);ctx.letterSpacing='0px';y+=26;
+  for(const line of lines){
+    if(line.type==='section'){ctx.fillStyle='#C5C2CE';ctx.font=`600 9px 'DM Sans',sans-serif`;ctx.letterSpacing='0.8px';ctx.fillText(line.text.toUpperCase(),PAD,y+12);ctx.letterSpacing='0px';y+=SECTION_H;}
+    else{const rowH=line.sub?LINE_H+14:LINE_H;ctx.fillStyle='rgba(255,255,255,0.65)';roundRect(ctx,PAD,y,W-PAD*2,rowH-4,9);ctx.fill();ctx.fillStyle=line.type==='adj'?'#777':'#0F0E17';ctx.font=`500 12.5px 'DM Sans',sans-serif`;ctx.fillText(truncate(line.name,32),PAD+11,y+18);if(line.type==='item'&&line.qty>0){ctx.fillStyle='#9A95A8';ctx.font=`400 10px 'DM Sans',sans-serif`;ctx.fillText(`${line.qty}× ${fmtRp(line.unitPrice)}`,PAD+11,y+32);}if(line.sub){ctx.fillStyle='#9A95A8';ctx.font=`400 10px 'DM Sans',sans-serif`;ctx.fillText(truncate(line.sub,34),PAD+11,line.qty?y+44:y+30);}ctx.textAlign='right';ctx.fillStyle=line.green?'#00C896':line.amber?'#FFB830':line.shared?'#9A95A8':'#FF5733';ctx.font=`600 12.5px 'DM Sans',sans-serif`;ctx.fillText(line.amt,W-PAD-11,y+18);if(line.shared&&line.type==='item'){ctx.fillStyle='#C0BCC8';ctx.font=`400 9.5px 'DM Sans',sans-serif`;ctx.fillText(`÷${n}`,W-PAD-11,y+32);}ctx.textAlign='left';y+=rowH+2;}
+  }
+  y+=8;ctx.fillStyle='#1A1830';roundRect(ctx,PAD,y,W-PAD*2,46,11);ctx.fill();ctx.fillStyle='white';ctx.font=`700 13px 'Syne',sans-serif`;ctx.fillText(truncate(pName,20)+' pays',PAD+14,y+27);ctx.textAlign='right';ctx.font=`800 15px 'Syne',sans-serif`;ctx.fillText(fmtRp(pTotal),W-PAD-14,y+27);ctx.textAlign='left';y+=58;
+  // QRIS info
+  if(hasQrisInfo){ctx.strokeStyle='#E0DDD8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PAD,y);ctx.lineTo(W-PAD,y);ctx.stroke();y+=13;ctx.fillStyle='#B0ADB8';ctx.font=`600 10px 'DM Sans',sans-serif`;ctx.letterSpacing='1px';ctx.fillText('QRIS INFO',PAD,y+12);ctx.letterSpacing='0px';y+=20;const col2=W/2;if(qrisInfo.name){ctx.fillStyle='#9A95A8';ctx.font=`400 10px 'DM Sans',sans-serif`;ctx.fillText('Merchant',PAD,y+11);ctx.fillStyle='#0F0E17';ctx.font=`600 12.5px 'DM Sans',sans-serif`;ctx.fillText(truncate(qrisInfo.name,26),PAD,y+26);}if(qrisInfo.nmid){ctx.fillStyle='#9A95A8';ctx.font=`400 10px 'DM Sans',sans-serif`;ctx.fillText('NMID',col2,y+11);ctx.fillStyle='#0F0E17';ctx.font=`600 12.5px 'DM Sans',sans-serif`;ctx.fillText(truncate(qrisInfo.nmid,22),col2,y+26);}y+=42;}
+  // QR
+  ctx.fillStyle='#B0ADB8';ctx.font=`600 10px 'DM Sans',sans-serif`;ctx.letterSpacing='1px';ctx.textAlign='center';ctx.fillText('SCAN TO PAY — QRIS',W/2,y+13);ctx.letterSpacing='0px';ctx.textAlign='left';y+=21;
+  if(qrEl){const qrX=(W-QR_SIZE)/2;ctx.fillStyle='white';roundRect(ctx,qrX-13,y-10,QR_SIZE+26,QR_SIZE+26,16);ctx.fill();ctx.shadowColor='rgba(0,0,0,0.09)';ctx.shadowBlur=16;ctx.shadowOffsetY=4;ctx.drawImage(qrEl,qrX,y,QR_SIZE,QR_SIZE);ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;if(assignedSlot){ctx.fillStyle='rgba(0,200,150,0.2)';roundRect(ctx,(W-150)/2,y+QR_SIZE+4,150,18,9);ctx.fill();ctx.fillStyle='#00C896';ctx.font=`600 10px 'DM Sans',sans-serif`;ctx.textAlign='center';ctx.fillText(`${assignedSlot.label} · MDR-free`,W/2,y+QR_SIZE+15);ctx.textAlign='left';}y+=QR_SIZE+28;}
+  // Bank
+  if(hasBankInfo){ctx.fillStyle='rgba(255,255,255,0.8)';roundRect(ctx,PAD,y,W-PAD*2,98,13);ctx.fill();ctx.strokeStyle='#E0DDD8';ctx.lineWidth=1;roundRect(ctx,PAD,y,W-PAD*2,98,13);ctx.stroke();ctx.fillStyle='#9A95A8';ctx.font=`600 10px 'DM Sans',sans-serif`;ctx.letterSpacing='1px';ctx.textAlign='center';ctx.fillText('OR BANK TRANSFER',W/2,y+17);ctx.letterSpacing='0px';ctx.textAlign='left';const bx=PAD+15,by2=y+27;ctx.fillStyle='#1A1830';roundRect(ctx,bx,by2,30,30,8);ctx.fill();ctx.font='14px serif';ctx.textAlign='center';ctx.fillText('🏦',bx+15,by2+20);ctx.textAlign='left';ctx.fillStyle='#0F0E17';ctx.font=`700 12.5px 'Syne',sans-serif`;ctx.fillText(truncate(bankName||'Bank',22),bx+38,by2+13);ctx.fillStyle='#9A95A8';ctx.font=`400 10px 'DM Sans',sans-serif`;ctx.fillText('Account Number',bx+38,by2+27);ctx.fillStyle='#0F0E17';ctx.font=`700 14px 'DM Sans',sans-serif`;ctx.fillText(bankAccNum||'—',bx+38,by2+46);if(bankBeneficiary){ctx.fillStyle='#9A95A8';ctx.font=`400 10px 'DM Sans',sans-serif`;ctx.fillText('a/n '+bankBeneficiary,bx+38,by2+62);}y+=106;}
+  // Footer
+  ctx.fillStyle='rgba(255,255,255,0.6)';roundRect(ctx,PAD,y,W-PAD*2,58,13);ctx.fill();ctx.textAlign='center';ctx.fillStyle='#1A1830';ctx.font=`700 12.5px 'Syne',sans-serif`;ctx.fillText('PayKit',W/2,y+21);ctx.fillStyle='#9A95A8';ctx.font=`400 10px 'DM Sans',sans-serif`;ctx.fillText('Open GoPay / OVO / BCA → Scan QR to pay',W/2,y+38);ctx.textAlign='left';
+  // Show modal
+  const modal=document.getElementById('share-modal');modal.classList.add('open');
+  const actEl=document.getElementById('share-actions');actEl.innerHTML='';actEl.style.flexWrap='wrap';
+  const makeBtn=(label,cls,fn)=>{const b=document.createElement('button');b.className='btn '+cls;b.style.flex='1';b.style.minWidth='110px';b.innerHTML=label;b.onclick=fn;actEl.appendChild(b);};
+  const getBlob=()=>new Promise(res=>canvas.toBlob(res,'image/png'));
+  makeBtn('📤 Share','btn-primary',async()=>{const blob=await getBlob();const file=new File([blob],`paykit-${pName.replace(/\s+/g,'_')}.png`,{type:'image/png'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:`${pName}'s bill`,text:`Hey ${pName}! Your share is ${fmtRp(pTotal)} 🧾`});return;}catch(e){if(e.name==='AbortError')return;}}downloadImage(blob,pName);});
+  makeBtn('💬 WhatsApp','btn-share',async()=>{const blob=await getBlob();const text=encodeURIComponent(`Hey ${pName}! Your share is ${fmtRp(pTotal)} 🧾\nPlease scan the QRIS to pay. Sending receipt now!`);window.open(`https://wa.me/?text=${text}`,'_blank');downloadImage(blob,pName);});
+  makeBtn('⬇ Save','btn-dl',async()=>{const b=await getBlob();downloadImage(b,pName);});
+}
+function downloadImage(blob,pName){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`paykit-${(pName||'person').toLowerCase().replace(/\s+/g,'_')}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function roundRect(ctx,x,y,w,h,r,r2,r3,r4){r2=r2??r;r3=r3??r;r4=r4??r;ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r2,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r2);ctx.lineTo(x+w,y+h-r3);ctx.quadraticCurveTo(x+w,y+h,x+w-r3,y+h);ctx.lineTo(x+r4,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r4);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
+function truncate(str,max){return str&&str.length>max?str.substring(0,max-1)+'…':str||'';}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+items=[{name:'',price:0,qty:1,assignedTo:'all'},{name:'',price:0,qty:1,assignedTo:'all'}];
+renderAll();updateSummary();
+switchQrisTab('paste');
+document.getElementById('qris-input').value=DEFAULT_QRIS;
+validateQRIS();
+renderQxHistoryList();
+renderSpLibraryList();
+refreshHome();
+</script>
+</body>
+</html>
