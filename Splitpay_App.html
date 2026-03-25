@@ -6,7 +6,6 @@
 <title>PayKit — Your Payment Super App</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-<!-- Swapped jsQR for ZXing -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/@zxing/browser@latest"></script>
 
@@ -39,7 +38,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .screen{position:absolute;inset:0;bottom:var(--bot-nav);overflow-y:auto;-webkit-overflow-scrolling:touch;transition:transform 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.3s;transform:translateX(100%);opacity:0;pointer-events:none;}
 .screen.active{transform:translateX(0);opacity:1;pointer-events:auto;}
 .screen.slide-left{transform:translateX(-30%);opacity:0;}
-/* home never slides left */
 #screen-home.active{transform:translateX(0);}
 
 /* ── BOTTOM NAV ──────────────────────── */
@@ -499,7 +497,6 @@ textarea{resize:none;font-size:11.5px;font-family:monospace;min-height:72px;line
     <div class="card">
       <div class="card-label">Receipt Photo</div>
       <div id="upload-zone" class="upload-zone-wrapper">
-        <!-- Default state: two action buttons -->
         <div id="receipt-btn-row" class="receipt-btn-row">
           <label class="receipt-action-btn camera-btn">
             <input type="file" id="receipt-camera" accept="image/*" capture="environment" onchange="handleFile(this)" style="display:none;">
@@ -661,14 +658,12 @@ textarea{resize:none;font-size:11.5px;font-family:monospace;min-height:72px;line
 let currentApp = 'home';
 
 function navTo(app) {
-  // Deactivate all screens
   document.querySelectorAll('.screen').forEach(s => {
     s.classList.remove('active','slide-left');
     if(s.id !== 'screen-' + app) s.classList.add('slide-left');
   });
   document.getElementById('screen-' + app).classList.remove('slide-left');
   document.getElementById('screen-' + app).classList.add('active');
-  // Nav items
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('nav-' + app)?.classList.add('active');
   currentApp = app;
@@ -787,7 +782,6 @@ async function qxHandleFile(input) {
   const reader = new FileReader();
   reader.onload = async(e) => {
     const imgSrc = e.target.result, b64 = imgSrc.split(',')[1];
-    // Show preview with retake/change buttons
     const zone = document.getElementById('qx-upload-zone');
     zone.innerHTML = `
       <div class="receipt-preview-wrap">
@@ -808,7 +802,6 @@ async function qxHandleFile(input) {
     document.getElementById('qx-result-panel').style.display='none';
     
     try {
-      // Step 1: Replace jsQR with robust ZXing implementation
       const raw = await decodeQRWithZXing(imgSrc);
       
       if(raw && isValidQRIS(raw)) {
@@ -822,7 +815,6 @@ async function qxHandleFile(input) {
         return;
       }
       
-      // AI fallback with live countdown
       showQxStatus('scanning','Step 2/2 — Sending to AI (up to 15s)…', 30);
       let elapsed=0;
       const countdownTimer=setInterval(()=>{
@@ -909,9 +901,7 @@ function renderQxResult(qrisStr, imgSrc) {
       </div>
     </div>`;
 
-  // Render TLV
   const tbody = document.getElementById('qx-tlv-body');
-  const TAG_NAMES = {'00':'Payload Format','01':'Point of Initiation','02-45':'Merchant Account','52':'Merchant Category','53':'Currency','54':'Amount','55':'Tip','58':'Country','59':'Merchant Name','60':'City','61':'Postal Code','62':'Additional Data','63':'CRC','64':'Merchant Info Language','65-79':'Unreserved'};
   Object.entries(tlv).forEach(([tag,val]) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${tag}</td><td>${escHtml(val.length>60?val.substring(0,60)+'…':val)}</td>`;
@@ -988,16 +978,13 @@ function getEmoji(i){return AVATAR_EMOJIS[i%AVATAR_EMOJIS.length];}
 function crc16(s){let c=0xFFFF;for(let i=0;i<s.length;i++){c^=s.charCodeAt(i)<<8;for(let j=0;j<8;j++){c=(c&0x8000)?((c<<1)^0x1021):(c<<1);c&=0xFFFF;}}return c;}
 function isValidQRIS(s){return s&&s.startsWith('000201')&&s.includes('6304')&&s.length>30;}
 
-// --- FIX: Prevent duplicate 54 (amount) tags being added to QRIS ---
 function modifyQRISAmount(qris, amount) {
     const ci = qris.lastIndexOf('6304');
     if (ci === -1) throw new Error('No CRC');
     let body = qris.substring(0, ci);
 
-    // Convert Static code to Dynamic
     if(body.includes('010211')) body = body.replace('010211', '010212');
 
-    // Parse existing tags to find and cleanly remove an existing amount tag ('54')
     const tlv = parseTLV(body);
     if (tlv['54']) {
         const amountStr = tlv['54'];
@@ -1005,11 +992,9 @@ function modifyQRISAmount(qris, amount) {
         body = body.replace(oldTag, '');
     }
 
-    // Prepare new amount tag
     const a = Math.round(amount).toString();
     const tag = '54' + String(a.length).padStart(2, '0') + a;
 
-    // Inject intelligently
     if (body.includes('5802ID')) body = body.replace('5802ID', tag + '5802ID');
     else if (body.includes('5303360')) body = body.replace('5303360', '5303360' + tag);
     else body += tag;
@@ -1046,7 +1031,6 @@ function validateQRIS(){
   return false;
 }
 
-// QRIS image decode
 async function handleQrisImage(input){
   const file=input.files[0];if(!file)return;
   const mime=file.type||'image/png';
@@ -1064,7 +1048,6 @@ async function handleQrisImage(input){
     ni.style.cssText='position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;';
     ni.onchange=function(){handleQrisImage(this);};zone.appendChild(ni);
 
-    // Step 1: ZXing pixel decode (fast, local)
     showQrisScanStatus('scanning','Step 1/2 — Scanning pixels locally…', 20);
     
     try {
@@ -1079,7 +1062,6 @@ async function handleQrisImage(input){
         return;
       }
 
-      // Step 2: AI fallback with live countdown
       showQrisScanStatus('scanning','Step 2/2 — Sending to AI (up to 15s)…', 30);
       let elapsed=0;
       const countdownTimer=setInterval(()=>{
@@ -1114,7 +1096,6 @@ async function handleQrisImage(input){
   reader.readAsDataURL(file);
 }
 
-// --- NEW: Local QR decoding using ZXing library ---
 async function decodeQRWithZXing(imgSrc) {
   try {
     const codeReader = new ZXingBrowser.BrowserQRCodeReader();
@@ -1128,7 +1109,7 @@ async function decodeQRWithZXing(imgSrc) {
     const result = await codeReader.decodeFromImageElement(img);
     return result.getText().trim();
   } catch (err) {
-    return null; // Ignore scan errors
+    return null;
   }
 }
 
@@ -1141,46 +1122,22 @@ function showQrisScanStatus(type, msg, progress=null){
   document.getElementById('qris-scan-status-box').innerHTML=`<div class="qris-scan-status ${type}"><div style="display:flex;align-items:center;gap:9px;width:100%;">${sp}<span style="flex:1;font-size:12.5px;">${msg}</span></div>${bar}</div>`;
 }
 
-// --- API KEY CONFIGURATION ---
-const apiKey = ""; // The execution environment provides the key at runtime.
-
-// --- Helper for Retries ---
-async function fetchWithBackoff(url, options, retries = 5) {
-  const delays = [1000, 2000, 4000, 8000, 16000];
-  for (let i = 0; i <= retries; i++) {
-    try {
-      const resp = await fetch(url, options);
-      if (!resp.ok) {
-         const errorData = await resp.json().catch(() => ({}));
-         throw new Error(errorData.error?.message || `HTTP error ${resp.status}`);
-      }
-      return await resp.json();
-    } catch (err) {
-      if (i === retries) throw err;
-      await new Promise(r => setTimeout(r, delays[i]));
-    }
-  }
-}
-
-// --- FIXED: AI API hit directly to Gemini using proper model, camelCase (inlineData), and backoff ---
+// --- SECURE PROXY ROUTING FOR QRIS ---
 async function extractQrisFromImageAI(b64, mime) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-  const options = {
+  const resp = await fetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{
-        role: "user",
-        parts: [
-          { text: 'Decode this QRIS QR code. Return ONLY the raw data string starting with "000201". No explanation. If cannot decode, return CANNOT_READ' },
-          { inlineData: { mimeType: mime, data: b64 } } 
-        ]
-      }]
+      prompt: 'Decode this QRIS QR code. Return ONLY the raw data string starting with "000201". No explanation. If cannot decode, return CANNOT_READ',
+      mimeType: mime,
+      base64Image: b64,
+      isJson: false
     })
-  };
+  });
   
-  const data = await fetchWithBackoff(url, options);
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().replace(/\s+/g, '') || '';
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error);
+  const text = data.result?.trim().replace(/\s+/g, '') || '';
   return (text === 'CANNOT_READ' || !text) ? null : text;
 }
 
@@ -1194,7 +1151,6 @@ async function handleFile(input){
   reader.onload=async(e)=>{
     receiptBase64=e.target.result.split(',')[1];
     const imgSrc=e.target.result;
-    // Show preview with retake/change buttons overlay
     const zone=document.getElementById('upload-zone');
     zone.innerHTML=`
       <div class="receipt-preview-wrap">
@@ -1218,7 +1174,7 @@ async function handleFile(input){
         setTimeout(()=>goStep(3),600);
     }
     catch(err){
-        console.error("Receipt OCR Error:", err); // Added this so you can see the real error!
+        console.error("Receipt OCR Error:", err);
         showOcrStatus('error','⚠ Could not read. Check developer console.');
         setTimeout(()=>{items=[{name:'',price:0,qty:1,assignedTo:'all'},{name:'',price:0,qty:1,assignedTo:'all'}];renderAll();goStep(3);},2500);
     }
@@ -1228,38 +1184,29 @@ async function handleFile(input){
 function formatTaxStatus(s){return s==='included'?'in prices':s==='excluded'?'separate':'none';}
 function showOcrStatus(type,msg){const sp=type==='scanning'?'<div class="ocr-spinner"></div>':'';document.getElementById('ocr-status-box').innerHTML=`<div class="ocr-status ${type}">${sp}<span>${msg}</span></div>`;}
 
-// --- FIXED: AI API hit directly to Gemini using proper model, camelCase AND asking for qty ---
+// --- SECURE PROXY ROUTING FOR RECEIPT OCR ---
 async function callOCR(b64, mime) {
-  // FIXED logic bug: We added "qty": number to the expected prompt so it reads "5x 30000" correctly!
   const promptText = `Analyze receipt, return JSON: {"store_name": "string", "items": [{"name": "string", "qty": number, "price": number}], "subtotal": number, "discount": number, "tax_amount": number, "tax_rate": number, "total": number, "tax_status": "included"|"excluded"|"none", "tax_note": "string"}. Extract the unit price for 'price'. Return ONLY JSON without markdown.`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-  const options = {
+  const resp = await fetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{
-        role: "user",
-        parts: [
-          { text: promptText },
-          { inlineData: { mimeType: mime, data: b64 } } 
-        ]
-      }],
-      generationConfig: {
-        responseMimeType: "application/json" 
-      }
+      prompt: promptText,
+      mimeType: mime,
+      base64Image: b64,
+      isJson: true
     })
-  };
+  });
   
-  const data = await fetchWithBackoff(url, options);
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error);
   
-  // Clean markdown blocks if Gemini accidentally wraps it
-  const cleanJson = data.candidates?.[0]?.content?.parts?.[0]?.text?.replace(/```json|```/g, '').trim() || '{}';
+  const cleanJson = data.result?.replace(/```json|```/g, '').trim() || '{}';
   return JSON.parse(cleanJson);
 }
 
 function applyOCR(r){
-  // FIXED logic bug: We now grab the qty from the AI result (or default to 1)
   items=(r.items||[]).filter(i=>i.price>0||i.name).map(i=>({
     name:i.name||'',
     price:parseFloat(i.price)||0,
@@ -1318,7 +1265,6 @@ function goStep(n){
   document.getElementById('btn-next').textContent=n===4?'✓ Done':'Continue →';
   document.getElementById('sp-step-badge').textContent='Step '+n+' of 4';
   currentStep=n;
-  // Scroll to top of screen
   document.getElementById('screen-splitpay').scrollTo({top:0,behavior:'smooth'});
   if(n===4){selectedPersonIdx=0;buildResult();}
 }
@@ -1373,7 +1319,6 @@ function buildResult(){
   if(!taxIncluded&&taxAmt>0)addRow('Tax share','+ '+fmtRp(taxAmt*ratio),'tax-r');
   addRow(pName+' pays',fmtRp(pTotal),'final');
 
-  // Slot badge
   const slotBadge=document.getElementById('qris-slot-badge');slotBadge.innerHTML='';
   const assignedSlot=getQRISSlotForPerson(pi);
   if(assignedSlot&&pTotal>0){slotBadge.innerHTML=`<div class="qris-slot-tag" style="background:rgba(0,200,150,0.2);color:#00C896;border:1px solid rgba(0,200,150,0.3);">🔳 ${escHtml(assignedSlot.label)} (MDR-free)</div>`;}
@@ -1381,7 +1326,6 @@ function buildResult(){
   if(assignedSlot&&pTotal>0){routingInfo.style.display='';routingInfo.textContent=`Free remaining on this QRIS: ${fmtRp(Math.max(0,MDR_LIMIT-(assignedSlot.dailyUsed||0)-pTotal))}`;}
   else routingInfo.style.display='none';
 
-  // QR Code
   const qrDiv=document.getElementById('qr-container');qrDiv.innerHTML='';
   const qrWrap=document.getElementById('qr-wrap');
 
@@ -1465,7 +1409,7 @@ async function shareReceipt(){
   if(hasBankInfo){ctx.fillStyle='rgba(255,255,255,0.8)';roundRect(ctx,PAD,y,W-PAD*2,98,13);ctx.fill();ctx.strokeStyle='#E0DDD8';ctx.lineWidth=1;roundRect(ctx,PAD,y,W-PAD*2,98,13);ctx.stroke();ctx.fillStyle='#9A95A8';ctx.font=`600 10px 'DM Sans',sans-serif`;ctx.letterSpacing='1px';ctx.textAlign='center';ctx.fillText('OR BANK TRANSFER',W/2,y+17);ctx.letterSpacing='0px';ctx.textAlign='left';const bx=PAD+15,by2=y+27;ctx.fillStyle='#1A1830';roundRect(ctx,bx,by2,30,30,8);ctx.fill();ctx.font='14px serif';ctx.textAlign='center';ctx.fillText('🏦',bx+15,by2+20);ctx.textAlign='left';ctx.fillStyle='#0F0E17';ctx.font=`700 12.5px 'Syne',sans-serif`;ctx.fillText(truncate(bankName||'Bank',22),bx+38,by2+13);ctx.fillStyle='#9A95A8';ctx.font=`400 10px 'DM Sans',sans-serif`;ctx.fillText('Account Number',bx+38,by2+27);ctx.fillStyle='#0F0E17';ctx.font=`700 14px 'DM Sans',sans-serif`;ctx.fillText(bankAccNum||'—',bx+38,by2+46);if(bankBeneficiary){ctx.fillStyle='#9A95A8';ctx.font=`400 10px 'DM Sans',sans-serif`;ctx.fillText('a/n '+bankBeneficiary,bx+38,by2+62);}y+=106;}
   // Footer
   ctx.fillStyle='rgba(255,255,255,0.6)';roundRect(ctx,PAD,y,W-PAD*2,58,13);ctx.fill();ctx.textAlign='center';ctx.fillStyle='#1A1830';ctx.font=`700 12.5px 'Syne',sans-serif`;ctx.fillText('PayKit',W/2,y+21);ctx.fillStyle='#9A95A8';ctx.font=`400 10px 'DM Sans',sans-serif`;ctx.fillText('Open GoPay / OVO / BCA → Scan QR to pay',W/2,y+38);ctx.textAlign='left';
-  // Show modal
+  
   const modal=document.getElementById('share-modal');modal.classList.add('open');
   const actEl=document.getElementById('share-actions');actEl.innerHTML='';actEl.style.flexWrap='wrap';
   const makeBtn=(label,cls,fn)=>{const b=document.createElement('button');b.className='btn '+cls;b.style.flex='1';b.style.minWidth='110px';b.innerHTML=label;b.onclick=fn;actEl.appendChild(b);};

@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     const { prompt, mimeType, base64Image, isJson } = req.body;
 
     const generationConfig = {};
-    if (isJson) generationConfig.responseMimeType = "application/json"; // MUST be camelCase
+    if (isJson) generationConfig.responseMimeType = "application/json";
 
     const payload = {
       contents: [{
@@ -23,8 +23,8 @@ export default async function handler(req, res) {
         parts: [
           { text: prompt },
           {
-            inlineData: { // MUST be camelCase
-              mimeType: mimeType, // MUST be camelCase
+            inlineData: {
+              mimeType: mimeType,
               data: base64Image
             }
           }
