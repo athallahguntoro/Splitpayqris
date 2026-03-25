@@ -27,12 +27,11 @@ export default async function handler(req, res) {
       generationConfig
     };
 
-    // Only attach image data if it was provided (OCR/QR processing)
-    // We skip this for text-only features like Auto-Emoji and Reminder Drafting
+    // Only attach image data if it was provided (for OCR/QR processing)
     if (base64Image && mimeType) {
         payload.contents[0].parts.push({
-            inlineData: {
-                mimeType: mimeType,
+            inlineData: { // Must be camelCase for the API to accept it!
+                mimeType: mimeType, 
                 data: base64Image
             }
         });
