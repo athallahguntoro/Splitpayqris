@@ -21,17 +21,22 @@ export default async function handler(req, res) {
       contents: [{
         role: "user",
         parts: [
-          { text: prompt },
-          {
-            inlineData: {
-              mimeType: mimeType,
-              data: base64Image
-            }
-          }
+          { text: prompt }
         ]
       }],
       generationConfig
     };
+
+    // Only attach image data if it was provided (OCR/QR processing)
+    // We skip this for text-only features like Auto-Emoji and Reminder Drafting
+    if (base64Image && mimeType) {
+        payload.contents[0].parts.push({
+            inlineData: {
+                mimeType: mimeType,
+                data: base64Image
+            }
+        });
+    }
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',

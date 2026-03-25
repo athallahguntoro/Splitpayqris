@@ -343,6 +343,10 @@ textarea{resize:none;font-size:11.5px;font-family:monospace;min-height:72px;line
 /* CHANGED z-index from 900 to 1100 to cover bottom nav */
 .share-modal-overlay{position:fixed;inset:0;background:rgba(15,14,23,0.75);backdrop-filter:blur(6px);z-index:1100;overflow-y:auto;padding:20px 16px 80px;display:none;}
 .share-modal-overlay.open{display:block;}
+
+/* REMINDER MODAL */
+.tone-btn{flex:1;padding:8px;font-size:11px;font-weight:600;border:1.5px solid var(--border);border-radius:10px;background:white;cursor:pointer;transition:all 0.2s;}
+.tone-btn.active{border-color:var(--purple);background:rgba(124,58,237,0.1);color:var(--purple);}
 </style>
 </head>
 <body>
@@ -534,7 +538,19 @@ textarea{resize:none;font-size:11.5px;font-family:monospace;min-height:72px;line
     <div class="step-sub">Set quantities, assign items, adjust tax & discounts.</div>
     <div id="store-header-box"></div>
     <div class="card"><div class="card-label row-sb"><span>People Splitting</span><button class="btn btn-ghost btn-sm" onclick="addPerson()" style="border:none;color:var(--coral);font-weight:700;padding:0;">+ Add</button></div><div class="people-grid" id="people-grid"></div></div>
-    <div class="card"><div class="card-label row-sb"><span>Items</span><button class="btn btn-ghost btn-sm" onclick="addItem()" style="border:none;color:var(--coral);font-weight:700;padding:0;">+ Add</button></div><div class="items-list" id="items-list"></div></div>
+    
+    <!-- AI EMOJIFY BUTTON ADDED HERE -->
+    <div class="card">
+      <div class="card-label row-sb">
+        <span>Items</span>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-ghost btn-sm" id="btn-emojify" onclick="emojifyItems()" style="border:1.5px solid rgba(124,58,237,0.4);color:var(--purple);font-weight:700;padding:4px 10px;background:rgba(124,58,237,0.05);">✨ Auto-Emoji</button>
+          <button class="btn btn-ghost btn-sm" onclick="addItem()" style="border:none;color:var(--coral);font-weight:700;padding:0;">+ Add</button>
+        </div>
+      </div>
+      <div class="items-list" id="items-list"></div>
+    </div>
+    
     <div class="card"><div class="card-label">Discount / Voucher</div><div class="pfx"><span class="pfx-label">Rp</span><input type="number" id="discount-input" placeholder="0" min="0" oninput="updateSummary()" inputmode="numeric"></div></div>
     <div class="card">
       <div class="card-label">Tax / Service Charge</div>
@@ -561,6 +577,10 @@ textarea{resize:none;font-size:11.5px;font-family:monospace;min-height:72px;line
       <div class="qris-routing-info" id="qris-routing-info" style="display:none;"></div>
     </div>
     <div class="breakdown" id="breakdown-box"><div class="breakdown-head"><span id="bd-person-name">Person's items</span><span id="bd-total-lbl"></span></div><div id="breakdown-rows"></div></div>
+    
+    <!-- AI DRAFT REMINDER BUTTON ADDED HERE -->
+    <button class="btn btn-ghost" onclick="openReminderModal()" id="btn-draft-reminder" style="margin-bottom:8px; border-color: rgba(124,58,237,0.4); color: var(--purple); background: rgba(124,58,237,0.05);">✨ Draft Reminder Message</button>
+    
     <button class="btn btn-ghost" onclick="goStep(3)" style="margin-bottom:8px;">← Edit Bill</button>
     <button class="btn btn-share" onclick="shareReceipt()" id="btn-share"><span>📤</span> Share Receipt + QR</button>
     <button class="btn btn-primary" onclick="if(confirm('Start a new split?')){currentStep=1;goStep(1);}" style="margin-top:8px;">+ New Split</button>
@@ -632,6 +652,25 @@ textarea{resize:none;font-size:11.5px;font-family:monospace;min-height:72px;line
     </div>
     <canvas id="share-canvas" style="width:100%;border-radius:18px;display:block;box-shadow:0 16px 48px rgba(0,0,0,0.4);"></canvas>
     <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;" id="share-actions"></div>
+  </div>
+</div>
+
+<!-- REMINDER MODAL ADDED HERE -->
+<div class="share-modal-overlay" id="reminder-modal">
+  <div style="max-width:400px;margin:0 auto;background:white;border-radius:24px;padding:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--ink);">✨ AI Reminder</div>
+      <button onclick="document.getElementById('reminder-modal').classList.remove('open')" style="background:var(--surface);border:none;color:var(--ink);width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Choose a tone to draft a message for <span id="reminder-pname" style="font-weight:700;color:var(--ink);"></span>:</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button class="tone-btn active" id="tone-friendly" onclick="generateReminder('friendly')">😊 Friendly</button>
+      <button class="tone-btn" id="tone-funny" onclick="generateReminder('funny')">😂 Funny</button>
+      <button class="tone-btn" id="tone-passive" onclick="generateReminder('passive-aggressive')">👀 Passive</button>
+      <button class="tone-btn" id="tone-mafia" onclick="generateReminder('mafia boss')">🕴️ Mafia</button>
+    </div>
+    <textarea id="reminder-textarea" style="width:100%;min-height:120px;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.5;margin-bottom:16px;padding:12px;border:1.5px solid var(--border);border-radius:12px;resize:none;" placeholder="Select a tone to generate a message..."></textarea>
+    <button class="btn btn-primary" id="btn-copy-reminder" onclick="copyReminder()" style="background:var(--purple);box-shadow:0 5px 18px rgba(124,58,237,0.3);">📋 Copy Message</button>
   </div>
 </div>
 
@@ -1125,7 +1164,7 @@ function showQrisScanStatus(type, msg, progress=null){
   document.getElementById('qris-scan-status-box').innerHTML=`<div class="qris-scan-status ${type}"><div style="display:flex;align-items:center;gap:9px;width:100%;">${sp}<span style="flex:1;font-size:12.5px;">${msg}</span></div>${bar}</div>`;
 }
 
-// --- SECURE PROXY ROUTING ---
+// --- SECURE PROXY ROUTING FOR ALL AI CALLS ---
 async function extractQrisFromImageAI(b64, mime) {
   const resp = await fetch('/api/gemini', {
     method: 'POST',
@@ -1186,7 +1225,6 @@ async function handleFile(input){
 function formatTaxStatus(s){return s==='included'?'in prices':s==='excluded'?'separate':'none';}
 function showOcrStatus(type,msg){const sp=type==='scanning'?'<div class="ocr-spinner"></div>':'';document.getElementById('ocr-status-box').innerHTML=`<div class="ocr-status ${type}">${sp}<span>${msg}</span></div>`;}
 
-// --- SECURE PROXY ROUTING ---
 async function callOCR(b64, mime) {
   const promptText = `Analyze receipt, return JSON: {"store_name": "string", "items": [{"name": "string", "qty": number, "price": number}], "subtotal": number, "discount": number, "tax_amount": number, "tax_rate": number, "total": number, "tax_status": "included"|"excluded"|"none", "tax_note": "string"}. Extract the unit price for 'price'. Return ONLY JSON without markdown.`;
 
@@ -1420,6 +1458,117 @@ async function shareReceipt(){
 function downloadImage(blob,pName){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`paykit-${(pName||'person').toLowerCase().replace(/\s+/g,'_')}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function roundRect(ctx,x,y,w,h,r,r2,r3,r4){r2=r2??r;r3=r3??r;r4=r4??r;ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r2,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r2);ctx.lineTo(x+w,y+h-r3);ctx.quadraticCurveTo(x+w,y+h,x+w-r3,y+h);ctx.lineTo(x+r4,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r4);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
 function truncate(str,max){return str&&str.length>max?str.substring(0,max-1)+'…':str||'';}
+
+// ══════════════════════════════════════════════════════════════
+// GEMINI AI INTEGRATION (NEW FEATURES ROUTED THROUGH PROXY)
+// ══════════════════════════════════════════════════════════════
+
+async function emojifyItems() {
+  const btn = document.getElementById('btn-emojify');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '✨ <div class="ocr-spinner" style="width:12px;height:12px;border-width:2px;border-color:var(--purple);border-top-color:transparent;display:inline-block;vertical-align:middle;margin-left:4px;"></div>';
+  btn.disabled = true;
+
+  try {
+    const itemNames = items.map(it => it.name);
+    if (!itemNames.length || !itemNames[0]) return;
+
+    const promptText = `Given this JSON array of item names, return a JSON array of strictly single emojis that best represent each item. The length and order of the output array MUST exactly match the input array. Input: ${JSON.stringify(itemNames)}`;
+
+    // Send through Vercel Proxy instead of directly to Google
+    const resp = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: promptText,
+        isJson: true // Tells proxy to format response as JSON
+      })
+    });
+
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+
+    const cleanJson = data.result?.replace(/```json|```/g, '').trim() || '[]';
+    const emojis = JSON.parse(cleanJson);
+    
+    items.forEach((it, i) => {
+      if (emojis[i] && !it.name.startsWith(emojis[i])) {
+        it.name = `${emojis[i]} ${it.name}`.trim();
+      }
+    });
+    renderItems();
+  } catch (err) {
+    console.error("Emojify error:", err);
+    alert("Failed to auto-emoji. Please try again.");
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+}
+
+function openReminderModal() {
+  const pi = selectedPersonIdx;
+  if(calcPersonAmounts().personTotals[pi] <= 0) {
+    alert("This person has nothing to pay!");
+    return;
+  }
+  document.getElementById('reminder-pname').textContent = personNames[pi] || ('P'+(pi+1));
+  document.getElementById('reminder-textarea').value = "";
+  document.getElementById('reminder-modal').classList.add('open');
+  generateReminder('friendly');
+}
+
+async function generateReminder(tone) {
+  document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+  const toneId = tone === 'passive-aggressive' ? 'tone-passive' : tone === 'mafia boss' ? 'tone-mafia' : `tone-${tone}`;
+  document.getElementById(toneId).classList.add('active');
+
+  const ta = document.getElementById('reminder-textarea');
+  ta.value = "✨ Drafting your message with AI...";
+  ta.disabled = true;
+  
+  const storeNameEl = document.querySelector('.store-name-txt');
+  const storeName = storeNameEl ? storeNameEl.textContent : 'the store';
+  const pi = selectedPersonIdx;
+  const pName = personNames[pi] || ('P'+(pi+1));
+  const {personTotals} = calcPersonAmounts();
+  const pTotal = Math.ceil(personTotals[pi]);
+  const amtStr = fmtRp(pTotal);
+
+  try {
+    const promptText = `Write a short, ${tone} text message (WhatsApp style) to send to my friend ${pName} reminding them to pay their share of ${amtStr} for our recent shared bill at ${storeName}. Mention that I will send my QRIS code for them to scan. Do not include placeholders like [Your Name] or [Link]. Keep it concise and under 3 sentences. Include relevant emojis.`;
+
+    // Send through Vercel Proxy instead of directly to Google
+    const resp = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: promptText,
+        isJson: false
+      })
+    });
+
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+
+    ta.value = data.result?.trim() || 'Failed to generate.';
+  } catch (err) {
+    console.error("Draft error:", err);
+    ta.value = "Failed to draft message. Please check the console.";
+  } finally {
+    ta.disabled = false;
+  }
+}
+
+function copyReminder() {
+  const text = document.getElementById('reminder-textarea').value;
+  if(!text || text.includes("Drafting")) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-copy-reminder');
+    btn.textContent = "✓ Copied!";
+    setTimeout(() => btn.textContent = "📋 Copy Message", 2000);
+  });
+}
 
 // ══════════════════════════════════════════════════════════════
 // INIT
