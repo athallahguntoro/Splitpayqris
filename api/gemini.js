@@ -69,7 +69,7 @@ export default async function handler(req, res) {
     }
 
     const groqPayload = {
-      model: "llama-3.2-90b-vision-preview", 
+      model: "meta-llama/llama-4-scout-17b-16e-instruct", // <-- Updated model ID
       messages: [{ role: "user", content: groqContent }],
       temperature: 0.1
     };
