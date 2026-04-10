@@ -69,7 +69,7 @@ export default async function handler(req, res) {
     }
 
     const zhipuPayload = {
-      model: "glm-4v-plus", 
+      model: "glm-4v", 
       messages: [{ role: "user", content: zhipuContent }]
     };
 
